@@ -9,6 +9,7 @@ This backlog tracks all features, tasks, and improvements for the Flutter Fitnes
 - 💾 **Database** - Data modeling and persistence
 - 💪 **Exercise Management** - Exercise CRUD and categorization
 - 🏋️ **Workout Management** - Workout creation and management
+- 🛠️ **Equipment Management** - User equipment inventory and management
 - 🤖 **AI Intelligence** - LLM-powered recommendations
 - 👤 **User Profile** - Profile management and preferences
 - 📊 **Analytics** - Progress tracking and insights
@@ -22,9 +23,10 @@ This backlog tracks all features, tasks, and improvements for the Flutter Fitnes
 
 ### Database Architecture
 - [ ] **[HIGH]** Design core database schema (User: Database Architecture Agent)
-  - Tables: users, exercises, workouts, categories, user_profiles
+  - Tables: users, exercises, workouts, categories, user_profiles, equipment, user_equipment
   - Relationships and foreign keys
   - Indexes for performance optimization
+  - Equipment-exercise compatibility tables
 - [ ] **[HIGH]** Implement Row Level Security (RLS) policies (User: Database Architecture Agent)
   - User data isolation
   - Public/private content access
@@ -79,6 +81,7 @@ This backlog tracks all features, tasks, and improvements for the Flutter Fitnes
 - [ ] **[HIGH]** Create Exercise model with validation (User: API Integration Agent)
 - [ ] **[HIGH]** Create Workout model with validation (User: API Integration Agent)
 - [ ] **[HIGH]** Create UserProfile model (User: API Integration Agent)
+- [ ] **[HIGH]** Create Equipment and UserEquipment models (User: API Integration Agent)
 - [ ] **[MEDIUM]** Create WorkoutSession model for tracking (User: API Integration Agent)
 - [ ] **[MEDIUM]** Create ExerciseLog model for progress tracking (User: API Integration Agent)
 
@@ -86,6 +89,7 @@ This backlog tracks all features, tasks, and improvements for the Flutter Fitnes
 - [ ] **[HIGH]** Implement Exercise repository with CRUD operations (User: API Integration Agent)
 - [ ] **[HIGH]** Implement Workout repository with CRUD operations (User: API Integration Agent)
 - [ ] **[HIGH]** Implement UserProfile repository (User: API Integration Agent)
+- [ ] **[HIGH]** Implement Equipment and UserEquipment repositories (User: API Integration Agent)
 - [ ] **[MEDIUM]** Add caching layer for offline support (User: API Integration Agent)
 - [ ] **[MEDIUM]** Implement data synchronization logic (User: API Integration Agent)
 
@@ -163,6 +167,96 @@ This backlog tracks all features, tasks, and improvements for the Flutter Fitnes
 - [ ] **[MEDIUM]** Public workout discovery (User: Flutter State Management Agent)
 - [ ] **[LOW]** Workout rating and reviews (User: Flutter State Management Agent)
 - [ ] **[LOW]** Social features (follow users, workout challenges) (User: Flutter State Management Agent)
+
+---
+
+## 🛠️ Equipment Management Epic
+
+### Equipment Data Model
+- [ ] **[HIGH]** Create Equipment model with validation (User: API Integration Agent)
+  - Equipment name, type, category
+  - Purchase date, condition, weight capacity
+  - Custom equipment support
+  - Equipment images and specifications
+- [ ] **[HIGH]** Create UserEquipment model for inventory (User: API Integration Agent)
+  - User-equipment relationships
+  - Equipment availability status
+  - Custom notes and modifications
+  - Maintenance history tracking
+
+### Equipment Repository
+- [ ] **[HIGH]** Implement Equipment repository with CRUD operations (User: API Integration Agent)
+  - Standard equipment catalog management
+  - User equipment inventory operations
+  - Equipment search and filtering
+  - Bulk equipment operations
+- [ ] **[MEDIUM]** Add equipment sync and caching (User: API Integration Agent)
+  - Offline equipment catalog
+  - User inventory synchronization
+  - Equipment data versioning
+
+### Equipment Management UI
+- [ ] **[HIGH]** Create equipment catalog screen (User: Flutter State Management Agent)
+  - Browse available equipment types
+  - Search and filter equipment
+  - Equipment details and specifications
+  - Add to user inventory functionality
+- [ ] **[HIGH]** Implement user equipment inventory screen (User: Flutter State Management Agent)
+  - View owned equipment
+  - Add/remove equipment from inventory
+  - Equipment condition and notes management
+  - Equipment availability toggle
+- [ ] **[HIGH]** Add equipment selection components (User: Flutter State Management Agent)
+  - Equipment picker for workout creation
+  - Multi-select equipment filtering
+  - Equipment availability indicators
+  - Quick equipment access shortcuts
+
+### Equipment Integration
+- [ ] **[HIGH]** Integrate equipment filtering in exercise screens (User: Flutter State Management Agent)
+  - Filter exercises by available equipment
+  - Show equipment requirements for exercises
+  - Equipment substitute suggestions
+  - Equipment compatibility indicators
+- [ ] **[HIGH]** Integrate equipment in workout creation (User: Flutter State Management Agent)
+  - Equipment-based workout templates
+  - Automatic equipment validation
+  - Equipment conflict detection
+  - Equipment setup reminders
+- [ ] **[MEDIUM]** Add equipment-based workout recommendations (User: LLM Intelligence Agent)
+  - AI recommendations based on available equipment
+  - Equipment utilization optimization
+  - Equipment progression suggestions
+  - Home gym setup recommendations
+
+### Equipment Catalog & Data
+- [ ] **[MEDIUM]** Build comprehensive equipment database (User: Database Architecture Agent)
+  - Standard gym equipment catalog
+  - Home equipment options
+  - Bodyweight alternatives
+  - Equipment specifications and images
+- [ ] **[MEDIUM]** Add equipment categorization system (User: Database Architecture Agent)
+  - Equipment types (cardio, strength, flexibility)
+  - Space requirements (home, gym, outdoor)
+  - Skill level requirements
+  - Price ranges and recommendations
+- [ ] **[LOW]** Equipment marketplace integration (User: API Integration Agent)
+  - Equipment purchasing links
+  - Price comparison features
+  - Equipment reviews and ratings
+  - Used equipment marketplace
+
+### Equipment Analytics
+- [ ] **[MEDIUM]** Track equipment usage statistics (User: Flutter State Management Agent)
+  - Most/least used equipment
+  - Equipment efficiency metrics
+  - Usage patterns and trends
+  - Equipment ROI analysis
+- [ ] **[LOW]** Equipment maintenance reminders (User: Flutter State Management Agent)
+  - Maintenance schedules
+  - Equipment condition tracking
+  - Replacement recommendations
+  - Safety check reminders
 
 ---
 
