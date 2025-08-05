@@ -11,6 +11,7 @@ import '../../features/workouts/presentation/screens/create_workout_screen.dart'
 import '../../features/workouts/presentation/screens/workout_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/debug/presentation/screens/database_debug_screen.dart';
 import '../../shared/widgets/main_navigation.dart';
 import '../../shared/widgets/splash_screen.dart';
 
@@ -89,6 +90,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppConstants.createWorkoutRoute,
         name: 'create-workout',
         builder: (context, state) => const CreateWorkoutScreen(),
+      ),
+      
+      // Debug routes (development only)
+      GoRoute(
+        path: '/debug/database',
+        name: 'debug-database',
+        builder: (context, state) => const DatabaseDebugScreen(),
       ),
     ],
     

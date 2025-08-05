@@ -48,12 +48,24 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 
 // App state providers
 final appInitializationProvider = FutureProvider<void>((ref) async {
-  // Initialize Supabase and other core services
-  await SupabaseConfig.initialize();
-  
-  // Initialize other services as needed
-  // await ref.read(localDatabaseProvider).initialize();
-  // await ref.read(syncServiceProvider).initialize();
+  // Skip Supabase initialization for local-first development
+  // We'll initialize it later when we're ready for remote sync
+  try {
+    // For now, just initialize local database and core services
+    debugPrint('App initialization: Running in local-first mode');
+    
+    // TODO: Initialize local database here when ready
+    // final dbManager = DatabaseManager();
+    // await dbManager.database;
+    
+    // Simulate initialization delay
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    debugPrint('App initialization completed successfully');
+  } catch (e) {
+    debugPrint('App initialization error: $e');
+    // Don't rethrow - let the app continue in offline mode
+  }
 });
 
 // Theme and UI providers

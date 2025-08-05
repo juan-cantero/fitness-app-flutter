@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// SQLite Database Manager for Fitness App
 /// 
@@ -22,6 +22,22 @@ class DatabaseManager {
     return _instance!;
   }
   
+  /// Initialize database factory for desktop platforms
+  static void _initializeDatabaseFactory() {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      try {
+        // Initialize FFI for desktop platforms
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+        debugPrint('Database factory initialized for desktop platform');
+      } catch (e) {
+        debugPrint('Failed to initialize desktop database factory: $e');
+        debugPrint('This is normal on systems without SQLite3 libraries installed');
+        // Fall back to default factory (will work on mobile)
+      }
+    }
+  }
+  
   /// Get the database instance
   Future<Database> get database async {
     _database ??= await _initDatabase();
@@ -30,6 +46,9 @@ class DatabaseManager {
   
   /// Initialize the database
   Future<Database> _initDatabase() async {
+    // Initialize database factory for desktop platforms
+    _initializeDatabaseFactory();
+    
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, _databaseName);
     

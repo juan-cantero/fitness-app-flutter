@@ -53,6 +53,7 @@ dependencies:
   
   # Local Database
   sqflite: ^2.4.1
+  sqflite_common_ffi: ^2.3.4
   path: ^1.9.0
   
   # JSON & Serialization
@@ -110,6 +111,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - lib/core/database/
     - assets/animations/
 
   # An image asset can refer to one or more resolution-specific "variants", see
