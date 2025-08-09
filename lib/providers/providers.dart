@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config/supabase_config.dart';
+import '../core/database/database_manager.dart';
+import '../core/database/web_database_manager.dart';
 
 // Core providers
 final supabaseProvider = Provider<SupabaseClient>((ref) {
@@ -51,20 +54,26 @@ final appInitializationProvider = FutureProvider<void>((ref) async {
   // Skip Supabase initialization for local-first development
   // We'll initialize it later when we're ready for remote sync
   try {
-    // For now, just initialize local database and core services
+    // Initialize local database and core services
     debugPrint('App initialization: Running in local-first mode');
     
-    // TODO: Initialize local database here when ready
-    // final dbManager = DatabaseManager();
-    // await dbManager.database;
-    
-    // Simulate initialization delay
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Initialize database based on platform
+    if (kIsWeb) {
+      debugPrint('Web platform detected - using WebDatabaseManager');
+      final webDbManager = WebDatabaseManager();
+      await webDbManager.initialize();
+      debugPrint('Web database initialized successfully');
+    } else {
+      debugPrint('Native platform detected - using DatabaseManager');
+      final dbManager = DatabaseManager();
+      await dbManager.database;
+      debugPrint('SQLite database initialized successfully');
+    }
     
     debugPrint('App initialization completed successfully');
   } catch (e) {
     debugPrint('App initialization error: $e');
-    // Don't rethrow - let the app continue in offline mode
+    rethrow; // Rethrow to show initialization error to user
   }
 });
 
