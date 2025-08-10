@@ -7,6 +7,7 @@ class AppConstants {
   static const String workoutsRoute = '/workouts';
   static const String profileRoute = '/profile';
   static const String createWorkoutRoute = '/create-workout';
+  static const String createExerciseRoute = '/create-exercise';
   static const String workoutDetailRoute = '/workout/:id';
   static const String exerciseDetailRoute = '/exercise/:id';
   

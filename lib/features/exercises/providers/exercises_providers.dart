@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/models/exercise.dart' as models;
-import '../../../shared/repositories/providers/repository_providers.dart';
 import '../../../core/database/database_manager.dart';
 import '../../../core/database/web_database_manager.dart';
 import '../../../shared/repositories/interfaces/repository_interfaces.dart';
@@ -420,9 +419,44 @@ final exerciseCategoriesProvider = StateNotifierProvider<ExerciseCategoriesNotif
   return ExerciseCategoriesNotifier(ref.watch(simpleExerciseRepositoryProvider));
 });
 
+/// Simple equipment provider for local-first development
+final simpleEquipmentProvider = Provider<List<Equipment>>((ref) {
+  // Return basic equipment list for now
+  return [
+    Equipment(
+      id: 'eq_bodyweight',
+      name: 'Bodyweight Only',
+      description: 'No equipment needed',
+      category: 'bodyweight',
+      createdAt: DateTime.now(),
+    ),
+    Equipment(
+      id: 'eq_dumbbells',
+      name: 'Dumbbells',
+      description: 'Adjustable or fixed-weight dumbbells',
+      category: 'strength',
+      createdAt: DateTime.now(),
+    ),
+    Equipment(
+      id: 'eq_barbell',
+      name: 'Barbell',
+      description: 'Olympic or standard barbell',
+      category: 'strength',
+      createdAt: DateTime.now(),
+    ),
+    Equipment(
+      id: 'eq_pull_up_bar',
+      name: 'Pull-up Bar',
+      description: 'Wall-mounted or doorway pull-up bar',
+      category: 'strength',
+      createdAt: DateTime.now(),
+    ),
+  ];
+});
+
 /// Exercise equipment provider
-final exerciseEquipmentProvider = StateNotifierProvider<ExerciseEquipmentNotifier, AsyncValue<List<Equipment>>>((ref) {
-  return ExerciseEquipmentNotifier(ref.watch(equipmentRepositoryProvider));
+final exerciseEquipmentProvider = Provider<AsyncValue<List<Equipment>>>((ref) {
+  return AsyncValue.data(ref.watch(simpleEquipmentProvider));
 });
 
 /// Popular exercises provider

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/exercises_providers.dart';
 import '../widgets/exercise_card.dart';
 import '../widgets/exercise_search_delegate.dart';
 import '../widgets/exercise_filters_bottom_sheet.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/repositories/interfaces/repository_interfaces.dart';
+import '../../../../core/constants/app_constants.dart';
 
 class ExercisesScreen extends ConsumerStatefulWidget {
   const ExercisesScreen({super.key});
@@ -84,7 +86,8 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
       ),
       floatingActionButton: _showFab
           ? FloatingActionButton(
-              onPressed: _showCreateExerciseDialog,
+              onPressed: () => context.push(AppConstants.createExerciseRoute),
+              tooltip: 'Create Exercise',
               child: const Icon(Icons.add),
             )
           : null,
@@ -439,22 +442,4 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
     );
   }
 
-  void _showCreateExerciseDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create Exercise'),
-        content: const Text(
-          'Exercise creation will be implemented in a future update. '
-          'For now, you can explore the existing exercise library.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 }

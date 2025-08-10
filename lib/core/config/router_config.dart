@@ -10,6 +10,7 @@ import '../../features/workouts/presentation/screens/workouts_screen.dart';
 import '../../features/workouts/presentation/screens/create_workout_screen.dart';
 import '../../features/workouts/presentation/screens/workout_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
+import '../../features/exercises/presentation/screens/exercise_creation_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/debug/presentation/screens/database_debug_screen.dart';
 import '../../shared/widgets/main_navigation.dart';
@@ -92,6 +93,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CreateWorkoutScreen(),
       ),
       
+      // Create exercise (full-screen)
+      GoRoute(
+        path: AppConstants.createExerciseRoute,
+        name: 'create-exercise',
+        builder: (context, state) => const ExerciseCreationScreen(),
+      ),
+      
       // Debug routes (development only)
       GoRoute(
         path: '/debug/database',
@@ -150,6 +158,10 @@ extension GoRouterExtensions on GoRouter {
   
   void pushCreateWorkout() {
     push(AppConstants.createWorkoutRoute);
+  }
+  
+  void pushCreateExercise() {
+    push(AppConstants.createExerciseRoute);
   }
   
   void goToLogin() {

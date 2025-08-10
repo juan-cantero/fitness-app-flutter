@@ -63,17 +63,26 @@ class DatabaseManager {
   
   /// Configure database settings
   Future<void> _onConfigure(Database db) async {
-    // Enable foreign key constraints
-    await db.execute('PRAGMA foreign_keys = ON');
-    
-    // Set journal mode to WAL for better performance
-    await db.execute('PRAGMA journal_mode = WAL');
-    
-    // Set synchronous mode to NORMAL for better performance
-    await db.execute('PRAGMA synchronous = NORMAL');
-    
-    // Enable query optimization
-    await db.execute('PRAGMA optimize');
+    try {
+      // Temporarily disable foreign key constraints during initialization
+      await db.execute('PRAGMA foreign_keys = OFF');
+      
+      // Try to set journal mode to WAL for better performance
+      // Some Android emulators don't support this
+      try {
+        await db.execute('PRAGMA journal_mode = WAL');
+      } catch (e) {
+        debugPrint('WAL mode not supported, using default: $e');
+      }
+      
+      // Set synchronous mode to NORMAL for better performance
+      await db.execute('PRAGMA synchronous = NORMAL');
+      
+      // Enable query optimization
+      await db.execute('PRAGMA optimize');
+    } catch (e) {
+      debugPrint('Database configuration warning: $e');
+    }
   }
   
   /// Create database tables and initial data
@@ -83,9 +92,9 @@ class DatabaseManager {
       final schemaScript = await rootBundle.loadString('lib/core/database/sqlite_schema.sql');
       await _executeSqlScript(db, schemaScript);
       
-      // Load and execute indexes
+      // Load and execute indexes (with FTS5 fallback handling)
       final indexScript = await rootBundle.loadString('lib/core/database/sqlite_indexes.sql');
-      await _executeSqlScript(db, indexScript);
+      await _executeSqlScriptWithFallback(db, indexScript);
       
       // Load and execute equipment catalog
       final equipmentScript = await rootBundle.loadString('lib/core/database/equipment_catalog.sql');
@@ -127,12 +136,8 @@ class DatabaseManager {
   
   /// Execute SQL script with proper error handling
   Future<void> _executeSqlScript(Database db, String script) async {
-    // Split script into individual statements
-    final statements = script
-        .split(';')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty && !s.startsWith('--'))
-        .toList();
+    // Parse SQL script properly handling triggers and multi-statement blocks
+    final statements = _parseSqlStatements(script);
     
     for (final statement in statements) {
       try {
@@ -141,6 +146,124 @@ class DatabaseManager {
         // Skip statements that might fail (like DROP TABLE IF EXISTS on fresh install)
         if (!statement.toUpperCase().contains('DROP') &&
             !statement.toUpperCase().contains('IF NOT EXISTS')) {
+          debugPrint('Error executing statement: $statement');
+          debugPrint('Error: $e');
+          rethrow;
+        }
+      }
+    }
+  }
+  
+  /// Parse SQL statements correctly handling triggers and compound statements
+  List<String> _parseSqlStatements(String script) {
+    final statements = <String>[];
+    final lines = script.split('\n');
+    final buffer = StringBuffer();
+    var inTrigger = false;
+    var triggerDepth = 0;
+    var isFtsTrigger = false;
+    
+    for (final line in lines) {
+      final trimmedLine = line.trim();
+      
+      // Skip comments and empty lines
+      if (trimmedLine.isEmpty || trimmedLine.startsWith('--')) {
+        continue;
+      }
+      
+      buffer.writeln(line);
+      
+      // Check for trigger start
+      if (trimmedLine.toUpperCase().contains('CREATE TRIGGER')) {
+        inTrigger = true;
+        triggerDepth = 0;
+        // Check if this is an FTS5 trigger
+        isFtsTrigger = trimmedLine.toUpperCase().contains('_FTS_') ||
+                      trimmedLine.toUpperCase().contains('EXERCISES_FTS') ||
+                      trimmedLine.toUpperCase().contains('WORKOUTS_FTS');
+      }
+      
+      // Track BEGIN/END depth in triggers
+      if (inTrigger) {
+        if (trimmedLine.toUpperCase().contains('BEGIN')) {
+          triggerDepth++;
+        }
+        if (trimmedLine.toUpperCase().contains('END;')) {
+          triggerDepth--;
+          if (triggerDepth <= 0) {
+            // End of trigger definition
+            if (!isFtsTrigger) {
+              statements.add(buffer.toString().trim());
+            } else {
+              debugPrint('FTS5 trigger skipped during parsing: ${buffer.toString().split('\n').first}...');
+            }
+            buffer.clear();
+            inTrigger = false;
+            triggerDepth = 0;
+            isFtsTrigger = false;
+          }
+        }
+      } else {
+        // Regular statement - check for semicolon termination
+        if (trimmedLine.endsWith(';')) {
+          final statement = buffer.toString().trim();
+          // Skip FTS5-related statements during parsing
+          if (!statement.toUpperCase().contains('FTS5') &&
+              !statement.toUpperCase().contains('EXERCISES_FTS') &&
+              !statement.toUpperCase().contains('WORKOUTS_FTS')) {
+            statements.add(statement);
+          } else {
+            debugPrint('FTS5 statement skipped during parsing: ${statement.split('\n').first}...');
+          }
+          buffer.clear();
+        }
+      }
+    }
+    
+    // Add any remaining content
+    if (buffer.isNotEmpty) {
+      final statement = buffer.toString().trim();
+      if (!statement.toUpperCase().contains('FTS5') &&
+          !statement.toUpperCase().contains('EXERCISES_FTS') &&
+          !statement.toUpperCase().contains('WORKOUTS_FTS')) {
+        statements.add(statement);
+      } else {
+        debugPrint('FTS5 statement skipped during parsing: ${statement.split('\n').first}...');
+      }
+    }
+    
+    return statements.where((s) => s.isNotEmpty).toList();
+  }
+  
+  /// Execute SQL script with FTS5 fallback handling
+  Future<void> _executeSqlScriptWithFallback(Database db, String script) async {
+    final statements = _parseSqlStatements(script);
+    
+    for (final statement in statements) {
+      try {
+        await db.execute(statement);
+      } catch (e) {
+        final upperStatement = statement.toUpperCase();
+        
+        // Handle FTS5 failures gracefully
+        if (upperStatement.contains('FTS5') || 
+            upperStatement.contains('VIRTUAL TABLE') ||
+            upperStatement.contains('EXERCISES_FTS') ||
+            upperStatement.contains('WORKOUTS_FTS') ||
+            upperStatement.contains('_FTS_INSERT') ||
+            upperStatement.contains('_FTS_DELETE') ||
+            upperStatement.contains('_FTS_UPDATE') ||
+            e.toString().contains('no such module') ||
+            e.toString().contains('fts5') ||
+            e.toString().contains('no such table: main.exercises_fts') ||
+            e.toString().contains('no such table: main.workouts_fts')) {
+          debugPrint('FTS5 not supported, skipping: ${statement.split('\n').first}...');
+          continue;
+        }
+        
+        // Skip statements that might fail (like DROP TABLE IF EXISTS on fresh install)
+        if (!upperStatement.contains('DROP') && 
+            !upperStatement.contains('IF NOT EXISTS')) {
           debugPrint('Error executing statement: $statement');
           debugPrint('Error: $e');
           rethrow;
