@@ -7,10 +7,11 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/exercises/presentation/screens/exercises_screen.dart';
 import '../../features/workouts/presentation/screens/workouts_screen.dart';
-import '../../features/workouts/presentation/screens/create_workout_screen.dart';
+import '../../features/workouts/presentation/screens/workout_creation_screen.dart';
 import '../../features/workouts/presentation/screens/workout_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_creation_screen.dart';
+import '../../features/exercises/presentation/screens/exercise_edit_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/debug/presentation/screens/database_debug_screen.dart';
 import '../../shared/widgets/main_navigation.dart';
@@ -90,7 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppConstants.createWorkoutRoute,
         name: 'create-workout',
-        builder: (context, state) => const CreateWorkoutScreen(),
+        builder: (context, state) => const WorkoutCreationScreen(),
       ),
       
       // Create exercise (full-screen)
@@ -98,6 +99,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppConstants.createExerciseRoute,
         name: 'create-exercise',
         builder: (context, state) => const ExerciseCreationScreen(),
+      ),
+      
+      // Edit exercise (full-screen)
+      GoRoute(
+        path: AppConstants.editExerciseRoute,
+        name: 'edit-exercise',
+        builder: (context, state) {
+          final exerciseId = state.pathParameters['id']!;
+          return ExerciseEditScreen(exerciseId: exerciseId);
+        },
       ),
       
       // Debug routes (development only)

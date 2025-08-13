@@ -1,7 +1,10 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/models/models.dart';
+import '../../../../shared/services/image_storage_service.dart';
+import '../../providers/exercise_creation_providers.dart';
 import '../../../../core/config/theme_config.dart';
 
 /// Exercise card widget for grid display
@@ -27,40 +30,28 @@ class ExerciseCard extends ConsumerWidget {
             // Exercise image or placeholder
             Expanded(
               flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: exercise.imageUrl != null
-                      ? null
-                      : _getExerciseTypeGradient(exercise.exerciseType),
-                ),
-                child: exercise.imageUrl != null
-                    ? Image.network(
-                        exercise.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _buildPlaceholder(),
-                      )
-                    : _buildPlaceholder(),
-              ),
+              child: _buildExerciseImage(ref),
             ),
             
             // Exercise details
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Exercise name
-                    Text(
-                      exercise.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                    Flexible(
+                      child: Text(
+                        exercise.name,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     
@@ -68,11 +59,11 @@ class ExerciseCard extends ConsumerWidget {
                     Row(
                       children: [
                         _buildDifficultyChip(exercise.difficultyLevel),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         if (exercise.requiresSpotter)
                           Icon(
                             Icons.supervisor_account,
-                            size: 16,
+                            size: 14,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                       ],
@@ -81,19 +72,103 @@ class ExerciseCard extends ConsumerWidget {
                     
                     // Primary muscle groups
                     if (exercise.primaryMuscleGroups.isNotEmpty)
-                      Text(
-                        exercise.primaryMuscleGroups.take(2).join(', '),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      Flexible(
+                        child: Text(
+                          exercise.primaryMuscleGroups.take(2).join(', '),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExerciseImage(WidgetRef ref) {
+    // Check if exercise has uploaded images
+    final hasUploadedImages = exercise.demonstrationImages.isNotEmpty || 
+                              (exercise.imageUrl != null && exercise.imageUrl!.isNotEmpty);
+    
+    if (hasUploadedImages) {
+      // Try to load the first available image
+      final imageSource = exercise.imageUrl ?? 
+                         (exercise.demonstrationImages.isNotEmpty 
+                          ? exercise.demonstrationImages.first 
+                          : null);
+      
+      if (imageSource != null) {
+        return _buildUploadedImageDisplay(ref, imageSource);
+      }
+    }
+    
+    // Fallback to placeholder with gradient and icon
+    return _buildPlaceholder();
+  }
+
+  Widget _buildUploadedImageDisplay(WidgetRef ref, String imageSource) {
+    final imageStorageService = ref.watch(imageStorageServiceProvider);
+    
+    return FutureBuilder<ImageMetadata?>(
+      future: _findImageMetadata(imageStorageService, imageSource),
+      builder: (context, metadataSnapshot) {
+        if (metadataSnapshot.hasData && metadataSnapshot.data != null) {
+          return FutureBuilder<Uint8List?>(
+            future: imageStorageService.getImageData(metadataSnapshot.data!),
+            builder: (context, imageSnapshot) {
+              if (imageSnapshot.connectionState == ConnectionState.waiting) {
+                return _buildLoadingPlaceholder();
+              } else if (imageSnapshot.hasData && imageSnapshot.data != null) {
+                return Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: MemoryImage(imageSnapshot.data!),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  // Optional overlay to improve text readability
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.1),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              } else {
+                return _buildPlaceholder();
+              }
+            },
+          );
+        } else {
+          return _buildPlaceholder();
+        }
+      },
+    );
+  }
+
+  Widget _buildLoadingPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: _getExerciseTypeGradient(exercise.exerciseType),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 2,
         ),
       ),
     );
@@ -108,25 +183,34 @@ class ExerciseCard extends ConsumerWidget {
         child: Icon(
           _getExerciseTypeIcon(exercise.exerciseType),
           size: 32,
-          color: Colors.white.withOpacity(0.8),
+          color: Colors.white.withValues(alpha: 0.8),
         ),
       ),
     );
   }
 
+  Future<ImageMetadata?> _findImageMetadata(ImageStorageService service, String imageId) async {
+    try {
+      // Now we store proper image IDs, so we can use the service to get metadata
+      return await service.getImageMetadata(imageId);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Widget _buildDifficultyChip(String difficulty) {
     final color = _getDifficultyColor(difficulty);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         difficulty.toUpperCase(),
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 8,
           fontWeight: FontWeight.w600,
           color: color,
         ),
@@ -222,19 +306,11 @@ class ExerciseListItem extends ConsumerWidget {
                 height: 60,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  gradient: _getExerciseTypeGradient(exercise.exerciseType),
                 ),
-                child: exercise.imageUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          exercise.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildIconPlaceholder(),
-                        ),
-                      )
-                    : _buildIconPlaceholder(),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: _buildListItemImage(ref),
+                ),
               ),
               const SizedBox(width: 16),
               
@@ -260,7 +336,7 @@ class ExerciseListItem extends ConsumerWidget {
                           ? exercise.description!
                           : exercise.primaryMuscleGroups.join(', '),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -290,7 +366,7 @@ class ExerciseListItem extends ConsumerWidget {
               // Arrow icon
               Icon(
                 Icons.chevron_right,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -299,29 +375,117 @@ class ExerciseListItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildIconPlaceholder() {
-    return Center(
-      child: Icon(
-        _getExerciseTypeIcon(exercise.exerciseType),
-        size: 24,
-        color: Colors.white,
+  Widget _buildListItemImage(WidgetRef ref) {
+    // Check if exercise has uploaded images
+    final hasUploadedImages = exercise.demonstrationImages.isNotEmpty || 
+                              (exercise.imageUrl != null && exercise.imageUrl!.isNotEmpty);
+    
+    if (hasUploadedImages) {
+      // Try to load the first available image
+      final imageSource = exercise.imageUrl ?? 
+                         (exercise.demonstrationImages.isNotEmpty 
+                          ? exercise.demonstrationImages.first 
+                          : null);
+      
+      if (imageSource != null) {
+        return _buildUploadedImageDisplaySmall(ref, imageSource);
+      }
+    }
+    
+    // Fallback to placeholder with gradient and icon
+    return _buildIconPlaceholder();
+  }
+
+  Widget _buildUploadedImageDisplaySmall(WidgetRef ref, String imageSource) {
+    final imageStorageService = ref.watch(imageStorageServiceProvider);
+    
+    return FutureBuilder<ImageMetadata?>(
+      future: _findImageMetadata(imageStorageService, imageSource),
+      builder: (context, metadataSnapshot) {
+        if (metadataSnapshot.hasData && metadataSnapshot.data != null) {
+          return FutureBuilder<Uint8List?>(
+            future: imageStorageService.getImageData(metadataSnapshot.data!),
+            builder: (context, imageSnapshot) {
+              if (imageSnapshot.connectionState == ConnectionState.waiting) {
+                return _buildSmallLoadingPlaceholder();
+              } else if (imageSnapshot.hasData && imageSnapshot.data != null) {
+                return Image.memory(
+                  imageSnapshot.data!,
+                  fit: BoxFit.cover,
+                  width: 60,
+                  height: 60,
+                );
+              } else {
+                return _buildIconPlaceholder();
+              }
+            },
+          );
+        } else {
+          return _buildIconPlaceholder();
+        }
+      },
+    );
+  }
+
+  Widget _buildSmallLoadingPlaceholder() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: _getExerciseTypeGradient(exercise.exerciseType),
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        ),
       ),
     );
+  }
+
+  Widget _buildIconPlaceholder() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: _getExerciseTypeGradient(exercise.exerciseType),
+      ),
+      child: Center(
+        child: Icon(
+          _getExerciseTypeIcon(exercise.exerciseType),
+          size: 24,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Future<ImageMetadata?> _findImageMetadata(ImageStorageService service, String imageId) async {
+    try {
+      // Now we store proper image IDs, so we can use the service to get metadata
+      return await service.getImageMetadata(imageId);
+    } catch (e) {
+      return null;
+    }
   }
 
   Widget _buildDifficultyChip(String difficulty) {
     final color = _getDifficultyColor(difficulty);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         difficulty.toUpperCase(),
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 8,
           fontWeight: FontWeight.w600,
           color: color,
         ),
@@ -333,10 +497,10 @@ class ExerciseListItem extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
         ),
       ),
       child: Text(

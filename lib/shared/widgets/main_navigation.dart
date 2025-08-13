@@ -34,12 +34,7 @@ class MainNavigation extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: _shouldShowFAB(context) 
-          ? FloatingActionButton(
-              onPressed: () => context.push(AppConstants.createWorkoutRoute),
-              child: const Icon(Icons.add),
-            )
-          : null,
+      floatingActionButton: _buildFAB(context),
     );
   }
 
@@ -69,9 +64,25 @@ class MainNavigation extends StatelessWidget {
     }
   }
 
-  bool _shouldShowFAB(BuildContext context) {
+  Widget? _buildFAB(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    // Show FAB on home/workouts screen
-    return location == AppConstants.homeRoute;
+    
+    if (location == AppConstants.homeRoute) {
+      return FloatingActionButton(
+        heroTag: "workouts_fab",
+        onPressed: () => context.push(AppConstants.createWorkoutRoute),
+        tooltip: 'Create Workout',
+        child: const Icon(Icons.add),
+      );
+    } else if (location == AppConstants.exercisesRoute) {
+      return FloatingActionButton(
+        heroTag: "exercises_fab",
+        onPressed: () => context.push(AppConstants.createExerciseRoute),
+        tooltip: 'Create Exercise',
+        child: const Icon(Icons.add),
+      );
+    }
+    
+    return null;
   }
 }

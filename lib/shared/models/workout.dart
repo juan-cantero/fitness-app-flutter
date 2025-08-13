@@ -30,6 +30,7 @@ class Workout with _$Workout {
     @Default(false) bool isTemplate,
     String? templateCategory,
     String? imageUrl,
+    @Default('cover') String imageFit, // 'cover', 'contain', 'fill'
     DateTime? createdAt,
     DateTime? updatedAt,
     // Related data
@@ -64,6 +65,7 @@ class Workout with _$Workout {
       isTemplate: (map['is_template'] as int?) == 1,
       templateCategory: map['template_category'] as String?,
       imageUrl: map['image_url'] as String?,
+      imageFit: map['image_fit'] as String? ?? 'cover',
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : null,
@@ -182,6 +184,7 @@ extension WorkoutExtension on Workout {
       'is_template': isTemplate ? 1 : 0,
       'template_category': templateCategory,
       'image_url': imageUrl,
+      'image_fit': imageFit,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

@@ -10,6 +10,7 @@ class AppConstants {
   static const String createExerciseRoute = '/create-exercise';
   static const String workoutDetailRoute = '/workout/:id';
   static const String exerciseDetailRoute = '/exercise/:id';
+  static const String editExerciseRoute = '/exercise/:id/edit';
   
   // Storage Keys
   static const String authTokenKey = 'auth_token';

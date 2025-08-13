@@ -42,7 +42,7 @@ class _ExerciseFiltersBottomSheetState
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
             ),
@@ -109,7 +109,7 @@ class _ExerciseFiltersBottomSheetState
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
             ),
@@ -162,7 +162,7 @@ class _ExerciseFiltersBottomSheetState
               );
             });
           },
-          selectedColor: _getDifficultyColor(difficulty).withOpacity(0.2),
+          selectedColor: _getDifficultyColor(difficulty).withValues(alpha: 0.2),
           checkmarkColor: _getDifficultyColor(difficulty),
         );
       }).toList(),

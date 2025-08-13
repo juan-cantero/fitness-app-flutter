@@ -44,6 +44,8 @@ mixin _$Workout {
   bool get isTemplate => throw _privateConstructorUsedError;
   String? get templateCategory => throw _privateConstructorUsedError;
   String? get imageUrl => throw _privateConstructorUsedError;
+  String get imageFit =>
+      throw _privateConstructorUsedError; // 'cover', 'contain', 'fill'
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError; // Related data
   List<WorkoutExercise> get exercises => throw _privateConstructorUsedError;
@@ -86,6 +88,7 @@ abstract class $WorkoutCopyWith<$Res> {
     bool isTemplate,
     String? templateCategory,
     String? imageUrl,
+    String imageFit,
     DateTime? createdAt,
     DateTime? updatedAt,
     List<WorkoutExercise> exercises,
@@ -130,6 +133,7 @@ class _$WorkoutCopyWithImpl<$Res, $Val extends Workout>
     Object? isTemplate = null,
     Object? templateCategory = freezed,
     Object? imageUrl = freezed,
+    Object? imageFit = null,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
     Object? exercises = null,
@@ -228,6 +232,10 @@ class _$WorkoutCopyWithImpl<$Res, $Val extends Workout>
                 ? _value.imageUrl
                 : imageUrl // ignore: cast_nullable_to_non_nullable
                       as String?,
+            imageFit: null == imageFit
+                ? _value.imageFit
+                : imageFit // ignore: cast_nullable_to_non_nullable
+                      as String,
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -278,6 +286,7 @@ abstract class _$$WorkoutImplCopyWith<$Res> implements $WorkoutCopyWith<$Res> {
     bool isTemplate,
     String? templateCategory,
     String? imageUrl,
+    String imageFit,
     DateTime? createdAt,
     DateTime? updatedAt,
     List<WorkoutExercise> exercises,
@@ -321,6 +330,7 @@ class __$$WorkoutImplCopyWithImpl<$Res>
     Object? isTemplate = null,
     Object? templateCategory = freezed,
     Object? imageUrl = freezed,
+    Object? imageFit = null,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
     Object? exercises = null,
@@ -419,6 +429,10 @@ class __$$WorkoutImplCopyWithImpl<$Res>
             ? _value.imageUrl
             : imageUrl // ignore: cast_nullable_to_non_nullable
                   as String?,
+        imageFit: null == imageFit
+            ? _value.imageFit
+            : imageFit // ignore: cast_nullable_to_non_nullable
+                  as String,
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -463,6 +477,7 @@ class _$WorkoutImpl implements _Workout {
     this.isTemplate = false,
     this.templateCategory,
     this.imageUrl,
+    this.imageFit = 'cover',
     this.createdAt,
     this.updatedAt,
     final List<WorkoutExercise> exercises = const [],
@@ -553,6 +568,10 @@ class _$WorkoutImpl implements _Workout {
   @override
   final String? imageUrl;
   @override
+  @JsonKey()
+  final String imageFit;
+  // 'cover', 'contain', 'fill'
+  @override
   final DateTime? createdAt;
   @override
   final DateTime? updatedAt;
@@ -569,7 +588,7 @@ class _$WorkoutImpl implements _Workout {
 
   @override
   String toString() {
-    return 'Workout(id: $id, name: $name, description: $description, createdBy: $createdBy, isPublic: $isPublic, difficultyLevel: $difficultyLevel, estimatedDurationMinutes: $estimatedDurationMinutes, actualDurationMinutes: $actualDurationMinutes, workoutType: $workoutType, targetMuscleGroups: $targetMuscleGroups, equipmentNeeded: $equipmentNeeded, spaceRequirement: $spaceRequirement, intensityLevel: $intensityLevel, restBetweenExercises: $restBetweenExercises, restBetweenSets: $restBetweenSets, warmupDurationMinutes: $warmupDurationMinutes, cooldownDurationMinutes: $cooldownDurationMinutes, caloriesEstimate: $caloriesEstimate, tags: $tags, notes: $notes, isTemplate: $isTemplate, templateCategory: $templateCategory, imageUrl: $imageUrl, createdAt: $createdAt, updatedAt: $updatedAt, exercises: $exercises)';
+    return 'Workout(id: $id, name: $name, description: $description, createdBy: $createdBy, isPublic: $isPublic, difficultyLevel: $difficultyLevel, estimatedDurationMinutes: $estimatedDurationMinutes, actualDurationMinutes: $actualDurationMinutes, workoutType: $workoutType, targetMuscleGroups: $targetMuscleGroups, equipmentNeeded: $equipmentNeeded, spaceRequirement: $spaceRequirement, intensityLevel: $intensityLevel, restBetweenExercises: $restBetweenExercises, restBetweenSets: $restBetweenSets, warmupDurationMinutes: $warmupDurationMinutes, cooldownDurationMinutes: $cooldownDurationMinutes, caloriesEstimate: $caloriesEstimate, tags: $tags, notes: $notes, isTemplate: $isTemplate, templateCategory: $templateCategory, imageUrl: $imageUrl, imageFit: $imageFit, createdAt: $createdAt, updatedAt: $updatedAt, exercises: $exercises)';
   }
 
   @override
@@ -629,6 +648,8 @@ class _$WorkoutImpl implements _Workout {
                 other.templateCategory == templateCategory) &&
             (identical(other.imageUrl, imageUrl) ||
                 other.imageUrl == imageUrl) &&
+            (identical(other.imageFit, imageFit) ||
+                other.imageFit == imageFit) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -666,6 +687,7 @@ class _$WorkoutImpl implements _Workout {
     isTemplate,
     templateCategory,
     imageUrl,
+    imageFit,
     createdAt,
     updatedAt,
     const DeepCollectionEquality().hash(_exercises),
@@ -710,6 +732,7 @@ abstract class _Workout implements Workout {
     final bool isTemplate,
     final String? templateCategory,
     final String? imageUrl,
+    final String imageFit,
     final DateTime? createdAt,
     final DateTime? updatedAt,
     final List<WorkoutExercise> exercises,
@@ -763,6 +786,8 @@ abstract class _Workout implements Workout {
   String? get templateCategory;
   @override
   String? get imageUrl;
+  @override
+  String get imageFit; // 'cover', 'contain', 'fill'
   @override
   DateTime? get createdAt;
   @override

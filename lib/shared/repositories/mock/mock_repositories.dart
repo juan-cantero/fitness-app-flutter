@@ -550,7 +550,19 @@ class MockWorkoutRepository implements IWorkoutRepository {
   }
 
   @override
-  Future<List<Workout>> searchWorkouts(String query, {String? userId, bool? isPublic, List<String>? tags, int? limit}) async {
+  Future<List<Workout>> searchWorkouts(
+    String? query, {
+    WorkoutFilter? filter,
+    WorkoutSortBy sortBy = WorkoutSortBy.name,
+    bool ascending = true,
+    int? limit,
+    int? offset,
+  }) async {
+    throw UnimplementedError('Mock method not fully implemented');
+  }
+
+  @override
+  Future<List<Workout>> getPopularWorkouts({int limit = 10}) async {
     throw UnimplementedError('Mock method not fully implemented');
   }
 }

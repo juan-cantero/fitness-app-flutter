@@ -43,6 +43,7 @@ _$WorkoutImpl _$$WorkoutImplFromJson(
   isTemplate: json['isTemplate'] as bool? ?? false,
   templateCategory: json['templateCategory'] as String?,
   imageUrl: json['imageUrl'] as String?,
+  imageFit: json['imageFit'] as String? ?? 'cover',
   createdAt: json['createdAt'] == null
       ? null
       : DateTime.parse(json['createdAt'] as String),
@@ -81,6 +82,7 @@ Map<String, dynamic> _$$WorkoutImplToJson(_$WorkoutImpl instance) =>
       'isTemplate': instance.isTemplate,
       'templateCategory': instance.templateCategory,
       'imageUrl': instance.imageUrl,
+      'imageFit': instance.imageFit,
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
       'exercises': instance.exercises,

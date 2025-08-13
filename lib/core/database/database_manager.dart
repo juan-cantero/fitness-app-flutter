@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -10,10 +11,11 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// Compatible with Supabase structure for sync operations
 class DatabaseManager {
   static const String _databaseName = 'fitness_app.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
   
   static Database? _database;
   static DatabaseManager? _instance;
+  static final Completer<void> _mutex = Completer<void>()..complete();
   
   DatabaseManager._internal();
   
@@ -78,6 +80,9 @@ class DatabaseManager {
       // Set synchronous mode to NORMAL for better performance
       await db.execute('PRAGMA synchronous = NORMAL');
       
+      // Set busy timeout to handle locks gracefully (ChatGPT's advice)
+      await db.execute('PRAGMA busy_timeout = 5000'); // 5 seconds
+      
       // Enable query optimization
       await db.execute('PRAGMA optimize');
     } catch (e) {
@@ -125,12 +130,26 @@ class DatabaseManager {
   Future<void> _runMigration(Database db, int version) async {
     switch (version) {
       case 2:
-        // Example future migration
-        // await _migrationV2(db);
+        await _migrationV2(db);
         break;
       // Add more cases for future versions
       default:
         debugPrint('No migration defined for version $version');
+    }
+  }
+
+  /// Migration to version 2: Add image_fit column to workouts table
+  Future<void> _migrationV2(Database db) async {
+    debugPrint('Running migration v2: Adding image_fit column to workouts table');
+    try {
+      await db.execute('''
+        ALTER TABLE workouts 
+        ADD COLUMN image_fit TEXT CHECK (image_fit IN ('cover', 'contain', 'fill')) DEFAULT 'cover'
+      ''');
+      debugPrint('Migration v2 completed successfully');
+    } catch (e) {
+      debugPrint('Migration v2 failed: $e');
+      rethrow;
     }
   }
   

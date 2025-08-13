@@ -387,17 +387,43 @@ class PopularExercisesNotifier extends StateNotifier<AsyncValue<List<Exercise>>>
 
 // PROVIDERS
 
+// Global cached repository to prevent multiple database manager creation
+// which was causing database locks during concurrent access
+IExerciseRepository? _globalExerciseRepository;
+
 /// Simple exercise repository provider for local-first development
 /// This bypasses the complex repository configuration system and works cross-platform
 final simpleExerciseRepositoryProvider = Provider<IExerciseRepository>((ref) {
+  if (_globalExerciseRepository != null) {
+    return _globalExerciseRepository!;
+  }
+  
   if (kIsWeb) {
     final webDatabaseManager = WebDatabaseManager();
-    return WebExerciseRepository(webDatabaseManager);
+    _globalExerciseRepository = WebExerciseRepository(webDatabaseManager);
   } else {
     final databaseManager = DatabaseManager();
-    return LocalExerciseRepository(databaseManager);
+    _globalExerciseRepository = LocalExerciseRepository(databaseManager);
   }
+  
+  return _globalExerciseRepository!;
 });
+
+/// Helper method to refresh exercise providers with targeted invalidations
+/// This is more efficient and idiomatically correct than the global trigger approach
+void refreshExerciseProviders(Ref ref, Exercise updatedExercise) {
+  // Targeted invalidation - only refresh what actually changed
+  ref.invalidate(exerciseByIdProvider(updatedExercise.id));
+  ref.invalidate(similarExercisesProvider(updatedExercise.id));
+  ref.invalidate(exerciseProgressionsProvider(updatedExercise.id));
+  ref.invalidate(exerciseRegressionsProvider(updatedExercise.id));
+  
+  // For the main list, use optimistic update if possible, otherwise invalidate
+  ref.invalidate(exercisesProvider);
+  ref.invalidate(popularExercisesProvider);
+  ref.invalidate(exerciseCategoriesProvider);
+  ref.invalidate(exerciseStatsProvider);
+}
 
 /// Main exercises provider
 final exercisesProvider = StateNotifierProvider<ExercisesNotifier, AsyncValue<List<Exercise>>>((ref) {

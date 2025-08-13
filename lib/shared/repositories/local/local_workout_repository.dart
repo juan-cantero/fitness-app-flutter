@@ -224,49 +224,103 @@ class LocalWorkoutRepository extends SyncAwareRepository<Workout> implements IWo
 
   @override
   Future<List<Workout>> searchWorkouts(
-    String query, {
-    String? userId,
-    bool? isPublic,
-    List<String>? tags,
+    String? query, {
+    WorkoutFilter? filter,
+    WorkoutSortBy sortBy = WorkoutSortBy.name,
+    bool ascending = true,
     int? limit,
+    int? offset,
   }) async {
     final whereConditions = <String>[];
     final whereArgs = <Object?>[];
 
     // Text search
-    if (query.trim().isNotEmpty) {
+    if (query != null && query.trim().isNotEmpty) {
       whereConditions.add('(LOWER(name) LIKE ? OR LOWER(description) LIKE ?)');
       final searchTerm = '%${query.toLowerCase()}%';
       whereArgs.addAll([searchTerm, searchTerm]);
     }
 
-    // User filter
-    if (userId != null) {
-      whereConditions.add('created_by = ?');
-      whereArgs.add(userId);
+    // Apply filters
+    if (filter != null) {
+      if (filter.targetMuscleGroups != null && filter.targetMuscleGroups!.isNotEmpty) {
+        final muscleConditions = filter.targetMuscleGroups!.map((_) => 'LOWER(target_muscle_groups) LIKE ?').join(' OR ');
+        whereConditions.add('($muscleConditions)');
+        whereArgs.addAll(filter.targetMuscleGroups!.map((muscle) => '%${muscle.toLowerCase()}%'));
+      }
+
+      if (filter.equipmentNeeded != null && filter.equipmentNeeded!.isNotEmpty) {
+        final equipConditions = filter.equipmentNeeded!.map((_) => 'LOWER(equipment_needed) LIKE ?').join(' OR ');
+        whereConditions.add('($equipConditions)');
+        whereArgs.addAll(filter.equipmentNeeded!.map((equip) => '%${equip.toLowerCase()}%'));
+      }
+
+      if (filter.difficultyLevel != null) {
+        whereConditions.add('difficulty_level = ?');
+        whereArgs.add(filter.difficultyLevel);
+      }
+
+      if (filter.workoutType != null) {
+        whereConditions.add('workout_type = ?');
+        whereArgs.add(filter.workoutType);
+      }
+
+      if (filter.intensityLevel != null) {
+        whereConditions.add('intensity_level = ?');
+        whereArgs.add(filter.intensityLevel);
+      }
+
+      if (filter.isTemplate != null) {
+        whereConditions.add('is_template = ?');
+        whereArgs.add(filter.isTemplate! ? 1 : 0);
+      }
+
+      if (filter.isPublic != null) {
+        whereConditions.add('is_public = ?');
+        whereArgs.add(filter.isPublic! ? 1 : 0);
+      }
     }
 
-    // Public filter
-    if (isPublic != null) {
-      whereConditions.add('is_public = ?');
-      whereArgs.add(isPublic ? 1 : 0);
+    // Build order by clause
+    String orderByClause;
+    switch (sortBy) {
+      case WorkoutSortBy.name:
+        orderByClause = 'name';
+        break;
+      case WorkoutSortBy.difficulty:
+        orderByClause = 'difficulty_level';
+        break;
+      case WorkoutSortBy.duration:
+        orderByClause = 'estimated_duration_minutes';
+        break;
+      case WorkoutSortBy.createdAt:
+        orderByClause = 'created_at';
+        break;
     }
-
-    // Tags filter
-    if (tags != null && tags.isNotEmpty) {
-      final tagConditions = tags.map((_) => 'LOWER(tags) LIKE ?').join(' OR ');
-      whereConditions.add('($tagConditions)');
-      whereArgs.addAll(tags.map((tag) => '%${tag.toLowerCase()}%'));
-    }
+    
+    orderByClause += ascending ? ' ASC' : ' DESC';
 
     if (whereConditions.isEmpty) {
-      return getAll(limit: limit, orderBy: 'name ASC');
+      return getAll(limit: limit, offset: offset, orderBy: orderByClause);
     }
 
     return findWhere(
       whereConditions.join(' AND '),
       whereArgs,
-      orderBy: 'name ASC',
+      orderBy: orderByClause,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<List<Workout>> getPopularWorkouts({int limit = 10}) async {
+    // For now, return recent workouts as popular ones
+    // In a real implementation, this could be based on usage statistics
+    return findWhere(
+      'is_public = 1',
+      [1],
+      orderBy: 'created_at DESC',
       limit: limit,
     );
   }

@@ -36,6 +36,7 @@ dependencies:
   
   # Backend & Database
   supabase_flutter: ^2.8.0
+  mutex: ^3.1.0
   
   # State Management
   flutter_riverpod: ^2.6.1
@@ -75,6 +76,11 @@ dependencies:
   
   # Permissions
   permission_handler: ^11.3.1
+  
+  # Image handling
+  image_picker: ^1.1.2
+  image: ^4.2.0
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:

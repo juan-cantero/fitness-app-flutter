@@ -230,6 +230,7 @@ CREATE TABLE IF NOT EXISTS workouts (
     is_template BOOLEAN DEFAULT FALSE,
     template_category TEXT,
     image_url TEXT,
+    image_fit TEXT CHECK (image_fit IN ('cover', 'contain', 'fill')) DEFAULT 'cover',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

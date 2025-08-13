@@ -47,7 +47,7 @@ class _ExerciseImagePickerState extends ConsumerState<ExerciseImagePicker> {
                 Text(
                   '${imageState.images.length}/$_maxImages',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -57,7 +57,7 @@ class _ExerciseImagePickerState extends ConsumerState<ExerciseImagePicker> {
             Text(
               'Add images to help demonstrate the exercise (optional)',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
 
@@ -126,7 +126,7 @@ class _ExerciseImagePickerState extends ConsumerState<ExerciseImagePicker> {
         onPressed: () => _showImageSourceDialog(context),
         style: OutlinedButton.styleFrom(
           side: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -138,7 +138,7 @@ class _ExerciseImagePickerState extends ConsumerState<ExerciseImagePicker> {
             Icon(
               Icons.add_photo_alternate_outlined,
               size: 48,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 8),
             Text(
@@ -151,7 +151,7 @@ class _ExerciseImagePickerState extends ConsumerState<ExerciseImagePicker> {
             Text(
               'Camera or Gallery',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -246,7 +246,7 @@ class _ExerciseImagePickerState extends ConsumerState<ExerciseImagePicker> {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.error.withOpacity(0.9),
+                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -272,7 +272,7 @@ class _ExerciseImagePickerState extends ConsumerState<ExerciseImagePicker> {
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [
-                      Colors.black.withOpacity(0.7),
+                      Colors.black.withValues(alpha: 0.7),
                       Colors.transparent,
                     ],
                   ),
@@ -316,7 +316,7 @@ class _ExerciseImagePickerState extends ConsumerState<ExerciseImagePicker> {
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: imageState.uploadProgress,
-            backgroundColor: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            backgroundColor: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
             valueColor: AlwaysStoppedAnimation<Color>(
               Theme.of(context).colorScheme.primary,
             ),

@@ -644,8 +644,17 @@ class HybridWorkoutRepository extends HybridRepository<Workout> implements IWork
       (local as IWorkoutRepository).getRecentWorkouts(userId, limit: limit);
 
   @override
-  Future<List<Workout>> searchWorkouts(String query, {String? userId, bool? isPublic, List<String>? tags, int? limit}) =>
-      (local as IWorkoutRepository).searchWorkouts(query, userId: userId, isPublic: isPublic, tags: tags, limit: limit);
+  Future<List<Workout>> searchWorkouts(String? query, {
+    WorkoutSortBy sortBy = WorkoutSortBy.name,
+    bool ascending = true,
+    WorkoutFilter? filter,
+    int? limit,
+    int? offset,
+  }) => (local as IWorkoutRepository).searchWorkouts(query, sortBy: sortBy, ascending: ascending, filter: filter, limit: limit, offset: offset);
+
+  @override
+  Future<List<Workout>> getPopularWorkouts({int limit = 10}) =>
+      (local as IWorkoutRepository).getPopularWorkouts(limit: limit);
 }
 
 class HybridWorkoutSessionRepository extends HybridRepository<WorkoutSession> implements IWorkoutSessionRepository {

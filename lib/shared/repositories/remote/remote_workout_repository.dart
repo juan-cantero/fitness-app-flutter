@@ -85,12 +85,18 @@ class RemoteWorkoutRepository extends RemoteBaseRepository<Workout> implements I
 
   @override
   Future<List<Workout>> searchWorkouts(
-    String query, {
-    String? userId,
-    bool? isPublic,
-    List<String>? tags,
+    String? query, {
+    WorkoutSortBy sortBy = WorkoutSortBy.name,
+    bool ascending = true,
+    WorkoutFilter? filter,
     int? limit,
+    int? offset,
   }) async {
+    throw UnimplementedError('Remote workout repository not yet implemented');
+  }
+
+  @override
+  Future<List<Workout>> getPopularWorkouts({int limit = 10}) async {
     throw UnimplementedError('Remote workout repository not yet implemented');
   }
 }

@@ -199,14 +199,18 @@ abstract class IWorkoutRepository extends ISyncAwareRepository<Workout> {
   /// Get recent workouts
   Future<List<Workout>> getRecentWorkouts(String userId, {int limit = 10});
 
-  /// Search workouts
+  /// Search workouts with comprehensive filtering
   Future<List<Workout>> searchWorkouts(
-    String query, {
-    String? userId,
-    bool? isPublic,
-    List<String>? tags,
+    String? query, {
+    WorkoutFilter? filter,
+    WorkoutSortBy sortBy = WorkoutSortBy.name,
+    bool ascending = true,
     int? limit,
+    int? offset,
   });
+
+  /// Get popular workouts
+  Future<List<Workout>> getPopularWorkouts({int limit = 10});
 }
 
 /// Workout Session repository interface

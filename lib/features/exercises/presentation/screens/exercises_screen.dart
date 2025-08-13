@@ -84,13 +84,6 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
           ),
         ],
       ),
-      floatingActionButton: _showFab
-          ? FloatingActionButton(
-              onPressed: () => context.push(AppConstants.createExerciseRoute),
-              tooltip: 'Create Exercise',
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 
@@ -311,7 +304,7 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.75,
+        childAspectRatio: 0.85,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),

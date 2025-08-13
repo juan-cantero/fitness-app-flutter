@@ -179,8 +179,8 @@ class ExerciseFormData {
       movementPattern: movementPattern?.trim().isEmpty == true ? null : movementPattern?.trim(),
       tags: tags,
       isPublic: isPublic,
-      imageUrl: images.isNotEmpty ? images.first.filePath : null,
-      demonstrationImages: images.map((img) => img.filePath).toList(),
+      imageUrl: images.isNotEmpty ? images.first.id : null,
+      demonstrationImages: images.map((img) => img.id).toList(),
       createdAt: now,
       updatedAt: now,
     );
@@ -285,10 +285,13 @@ class ExerciseCreationState {
 class ExerciseCreationNotifier extends StateNotifier<ExerciseCreationState> {
   final IExerciseRepository _exerciseRepository;
   final ImageStorageService _imageStorageService;
+  final Ref _ref;
+  String? _editingExerciseId;
 
   ExerciseCreationNotifier(
     this._exerciseRepository,
     this._imageStorageService,
+    this._ref,
   ) : super(const ExerciseCreationState());
 
   /// Update form field
@@ -426,6 +429,8 @@ class ExerciseCreationNotifier extends StateNotifier<ExerciseCreationState> {
 
     try {
       final exercise = state.formData.toExercise(state.imageState.images);
+      
+      
       await _exerciseRepository.create(exercise);
 
       state = state.copyWith(
@@ -446,7 +451,127 @@ class ExerciseCreationNotifier extends StateNotifier<ExerciseCreationState> {
   /// Reset form
   void resetForm() {
     state = const ExerciseCreationState();
+    _editingExerciseId = null;
   }
+
+  /// Initialize form for editing an existing exercise
+  Future<void> initializeForEditing(String exerciseId) async {
+    _editingExerciseId = exerciseId;
+    
+    // Reset the state to ensure clean editing experience
+    state = state.copyWith(
+      isSubmitting: false,
+      isSubmitted: false,
+      submitError: null,
+    );
+    
+    // Load existing images for the exercise
+    await _loadExistingImages(exerciseId);
+  }
+
+  /// Load existing images for an exercise being edited
+  Future<void> _loadExistingImages(String exerciseId) async {
+    try {
+      print('Loading existing images for exercise: $exerciseId');
+      
+      // Get the exercise to find its image IDs
+      final exercise = await _exerciseRepository.getById(exerciseId);
+      print('Exercise loaded: ${exercise?.name}');
+      
+      if (exercise == null) return;
+
+      // Load metadata for existing images
+      final existingImages = <ImageMetadata>[];
+      
+      print('Loading ${exercise.demonstrationImages.length} demonstration images');
+      
+      for (final imageId in exercise.demonstrationImages) {
+        final metadata = await _imageStorageService.getImageMetadata(imageId);
+        if (metadata != null) {
+          existingImages.add(metadata);
+          print('Loaded image metadata: ${metadata.fileName}');
+        }
+      }
+
+      print('Loaded ${existingImages.length} existing images');
+
+      // Update state with existing images
+      state = state.copyWith(
+        imageState: state.imageState.copyWith(images: existingImages),
+      );
+      
+      print('State updated with existing images');
+    } catch (e) {
+      print('Error loading existing images: $e');
+      // Handle error loading existing images
+      state = state.copyWith(
+        imageState: state.imageState.copyWith(error: 'Failed to load existing images: $e'),
+      );
+    }
+  }
+
+  /// Update existing exercise instead of creating new one
+  Future<bool> updateExercise() async {
+    print('=== UPDATE EXERCISE DEBUG ===');
+    print('Is submitting: ${state.isSubmitting}');
+    print('Editing exercise ID: $_editingExerciseId');
+    
+    if (state.isSubmitting || _editingExerciseId == null) {
+      print('Skipping update: submitting=$state.isSubmitting, id=$_editingExerciseId');
+      return false;
+    }
+
+    // Validate form
+    final validationState = _validateForm(state.formData);
+    print('Validation valid: ${validationState.isValid}');
+    print('Validation errors: ${validationState.errors}');
+    
+    if (!validationState.isValid) {
+      state = state.copyWith(validationState: validationState);
+      return false;
+    }
+
+    state = state.copyWith(
+      isSubmitting: true,
+      submitError: null,
+    );
+
+    try {
+      print('Creating updated exercise...');
+      // Create updated exercise with existing ID
+      final updatedExercise = state.formData.toExercise(state.imageState.images).copyWith(
+        id: _editingExerciseId!,
+        updatedAt: DateTime.now(),
+      );
+      
+      print('Calling repository update...');
+      
+      // Now using the proper repository pattern with fixed retry logic
+      await _exerciseRepository.update(updatedExercise);
+      
+      // Trigger targeted refresh of exercise providers using proper Riverpod pattern
+      print('Triggering targeted provider refresh...');
+      refreshExerciseProviders(_ref, updatedExercise);
+      
+      print('Repository update completed');
+
+      state = state.copyWith(
+        isSubmitting: false,
+        isSubmitted: true,
+      );
+      
+      print('Update successful');
+      return true;
+    } catch (e) {
+      print('Update failed with error: $e');
+      state = state.copyWith(
+        isSubmitting: false,
+        submitError: e.toString(),
+      );
+      return false;
+    }
+  }
+
 
   /// Validate form data
   FormValidationState _validateForm(ExerciseFormData data) {
@@ -478,10 +603,6 @@ class ExerciseCreationNotifier extends StateNotifier<ExerciseCreationState> {
       errors['description'] = 'Description cannot exceed 500 characters';
     }
 
-    if (data.estimatedDurationMinutes != null &&
-        (data.estimatedDurationMinutes! < 1 || data.estimatedDurationMinutes! > 300)) {
-      errors['estimatedDurationMinutes'] = 'Duration must be between 1 and 300 minutes';
-    }
 
     return FormValidationState(
       errors: errors,
@@ -502,6 +623,7 @@ final exerciseCreationProvider = StateNotifierProvider<ExerciseCreationNotifier,
   return ExerciseCreationNotifier(
     ref.watch(simpleExerciseRepositoryProvider),
     ref.watch(imageStorageServiceProvider),
+    ref,
   );
 });
 

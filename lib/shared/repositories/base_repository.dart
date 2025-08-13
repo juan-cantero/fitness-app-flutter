@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:math';
+import 'package:mutex/mutex.dart';
+import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/database/database_manager.dart';
@@ -10,6 +13,9 @@ abstract class BaseRepository<T> {
   final DatabaseManager _databaseManager;
   final String tableName;
   final Uuid _uuid = const Uuid();
+  
+  // Replace spinlock with proper mutex for clean synchronization
+  static final Mutex _updateMutex = Mutex();
 
   BaseRepository(this._databaseManager, this.tableName);
 
@@ -108,33 +114,76 @@ abstract class BaseRepository<T> {
     }
   }
 
-  /// Update record
+  /// Update record with proper mutex synchronization and exponential backoff
   Future<T> update(T model) async {
-    final db = await database;
-    final data = toDatabase(model);
-    final id = getId(model);
+    return _updateMutex.protect(() async {
+      final data = toDatabase(model);
+      final id = getId(model);
 
-    try {
-      final count = await db.update(
-        tableName,
-        data,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      print('Starting update operation for $tableName with id: $id');
+      
+      // Retry logic with exponential backoff and jitter
+      for (int attempt = 1; attempt <= 5; attempt++) {
+        try {
+          print('Update attempt $attempt/5');
+          
+          final db = await database;
+          
+          // Use a short transaction to minimize lock time
+          final count = await db.transaction<int>((txn) async {
+            return await txn.update(
+              tableName,
+              data,
+              where: 'id = ?',
+              whereArgs: [id],
+            );
+          });
+          
+          print('Update completed, affected rows: $count');
 
-      if (count == 0) {
-        throw repo_exceptions.DatabaseException('$tableName with id $id not found');
+          if (count == 0) {
+            throw repo_exceptions.DatabaseException('$tableName with id $id not found');
+          }
+
+          // Success! Return the updated model
+          print('Update successful on attempt $attempt');
+          return model;
+          
+        } catch (e) {
+          final errorStr = e.toString().toLowerCase();
+          
+          // Check if this is a database lock error
+          if (errorStr.contains('database is locked') || 
+              errorStr.contains('database locked') ||
+              errorStr.contains('locked')) {
+            
+            print('Database locked on attempt $attempt/5: $e');
+            
+            if (attempt == 5) {
+              // Last attempt failed, give up
+              throw repo_exceptions.DatabaseException('Database remained locked after 5 attempts: $e');
+            }
+            
+            // Exponential backoff with jitter (more robust than linear)
+            final base = 100; // ms
+            final exponentialWait = base * (1 << (attempt - 1)); // 100, 200, 400, 800
+            final jitter = Random().nextInt(50); // 0-49ms random jitter
+            final waitMs = exponentialWait + jitter;
+            
+            print('Waiting ${waitMs}ms before retry (exponential backoff)...');
+            await Future.delayed(Duration(milliseconds: waitMs));
+            continue;
+          } else {
+            // Non-lock error, don't retry
+            print('Non-lock error, not retrying: $e');
+            throw repo_exceptions.DatabaseException('Failed to update $tableName: $e');
+          }
+        }
       }
-
-      // Track for sync
-      if (await _shouldTrackSync()) {
-        await _trackSyncOperation(id, 'update', data);
-      }
-
-      return model;
-    } catch (e) {
-      throw repo_exceptions.DatabaseException('Failed to update $tableName: $e');
-    }
+      
+      // Should never reach here due to the loop logic above
+      throw repo_exceptions.DatabaseException('Update failed after all retry attempts');
+    });
   }
 
   /// Delete record by ID
@@ -270,8 +319,10 @@ abstract class BaseRepository<T> {
     String operation,
     Map<String, dynamic> data,
   ) async {
-    final db = await database;
     try {
+      // Get a fresh database connection to avoid deadlocks
+      final db = await _databaseManager.database;
+      
       final syncRecord = SyncStatus(
         id: generateId(),
         tableName: tableName,
@@ -286,6 +337,7 @@ abstract class BaseRepository<T> {
     } catch (e) {
       // Don't fail the main operation if sync tracking fails
       print('Warning: Failed to track sync operation: $e');
+      // If sync table doesn't exist or there's a deadlock, continue anyway
     }
   }
 
