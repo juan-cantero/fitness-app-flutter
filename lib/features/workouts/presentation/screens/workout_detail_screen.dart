@@ -114,10 +114,7 @@ class WorkoutDetailScreen extends ConsumerWidget {
               onSelected: (value) async {
                 switch (value) {
                   case 'edit':
-                    // TODO: Implement edit functionality
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Edit functionality will be implemented soon')),
-                    );
+                    context.push('/workout/${workout.id}/edit');
                     break;
                   case 'clone':
                     // TODO: Clone workout

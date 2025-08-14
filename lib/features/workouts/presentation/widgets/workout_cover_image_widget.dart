@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../providers/workout_creation_providers.dart';
+import '../../providers/workout_edit_providers.dart';
+import '../../models/workout_form_mode.dart';
 import '../../../../shared/widgets/cached_network_image_widget.dart';
 import '../../../../shared/utils/image_utils.dart';
 
 class WorkoutCoverImageWidget extends ConsumerStatefulWidget {
-  final bool isEditMode;
+  final WorkoutFormMode mode;
   
   const WorkoutCoverImageWidget({
     super.key,
-    this.isEditMode = false,
+    this.mode = WorkoutFormMode.creation,
   });
 
   @override
@@ -22,10 +24,18 @@ class _WorkoutCoverImageWidgetState extends ConsumerState<WorkoutCoverImageWidge
 
   @override
   Widget build(BuildContext context) {
-    // Watch both image state and imageFit from form data
-    final imageState = ref.watch(workoutCreationProvider.select((state) => state.imageState));
-    final formImageFit = ref.watch(workoutCreationProvider.select((state) => state.formData.imageFit));
-    final notifier = ref.read(workoutCreationProvider.notifier);
+    // Watch appropriate provider based on mode
+    final imageState = widget.mode == WorkoutFormMode.creation
+        ? ref.watch(workoutCreationProvider.select((state) => state.imageState))
+        : ref.watch(workoutEditProvider.select((state) => state.imageState));
+        
+    final formImageFit = widget.mode == WorkoutFormMode.creation
+        ? ref.watch(workoutCreationProvider.select((state) => state.formData.imageFit))
+        : ref.watch(workoutEditProvider.select((state) => state.formData.imageFit));
+        
+    final notifier = widget.mode == WorkoutFormMode.creation
+        ? ref.read(workoutCreationProvider.notifier)
+        : ref.read(workoutEditProvider.notifier);
     
     // Sync local state with form data
     final formBoxFit = ImageUtils.stringToBoxFit(formImageFit);
@@ -57,7 +67,7 @@ class _WorkoutCoverImageWidgetState extends ConsumerState<WorkoutCoverImageWidge
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.isEditMode ? 'Change Workout Cover Image' : 'Workout Cover Image',
+              widget.mode == WorkoutFormMode.edit ? 'Change Workout Cover Image' : 'Workout Cover Image',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -102,7 +112,7 @@ class _WorkoutCoverImageWidgetState extends ConsumerState<WorkoutCoverImageWidge
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          widget.isEditMode ? 'Change Cover Image' : 'Add Cover Image',
+                          widget.mode.imagePickerText,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 color: Theme.of(context).colorScheme.primary,
                               ),
@@ -161,7 +171,7 @@ class _WorkoutCoverImageWidgetState extends ConsumerState<WorkoutCoverImageWidge
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.white),
-                                onPressed: () => notifier.removeImage(),
+                                onPressed: () => _removeImage(notifier),
                                 tooltip: 'Remove image',
                               ),
                             ],
@@ -239,7 +249,7 @@ class _WorkoutCoverImageWidgetState extends ConsumerState<WorkoutCoverImageWidge
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () => notifier.clearImageError(),
+                      onPressed: () => _clearImageError(notifier),
                       color: Theme.of(context).colorScheme.error,
                     ),
                   ],
@@ -258,9 +268,28 @@ class _WorkoutCoverImageWidgetState extends ConsumerState<WorkoutCoverImageWidge
     });
     
     // Save the preference to the form data
-    final notifier = ref.read(workoutCreationProvider.notifier);
     final fitString = ImageUtils.boxFitToString(fit);
-    notifier.updateField('imageFit', fitString);
+    if (widget.mode == WorkoutFormMode.creation) {
+      ref.read(workoutCreationProvider.notifier).updateField('imageFit', fitString);
+    } else {
+      ref.read(workoutEditProvider.notifier).updateField('imageFit', fitString);
+    }
+  }
+  
+  void _removeImage(Object notifier) {
+    if (widget.mode == WorkoutFormMode.creation) {
+      (notifier as WorkoutCreationNotifier).removeImage();
+    } else {
+      (notifier as WorkoutEditNotifier).removeImage();
+    }
+  }
+  
+  void _clearImageError(Object notifier) {
+    if (widget.mode == WorkoutFormMode.creation) {
+      (notifier as WorkoutCreationNotifier).clearImageError();
+    } else {
+      (notifier as WorkoutEditNotifier).clearImageError();
+    }
   }
 
   String _getImageFitDescription(BoxFit fit) {
@@ -314,10 +343,13 @@ class _WorkoutCoverImageWidgetState extends ConsumerState<WorkoutCoverImageWidge
 
       if (image == null) return;
 
-      // Upload the image
-      final notifier = ref.read(workoutCreationProvider.notifier);
+      // Upload the image - use appropriate notifier based on mode
       final imageData = await image.readAsBytes();
-      await notifier.addImage(imageData, image.name);
+      if (widget.mode == WorkoutFormMode.creation) {
+        await ref.read(workoutCreationProvider.notifier).addImage(imageData, image.name);
+      } else {
+        await ref.read(workoutEditProvider.notifier).addImage(imageData, image.name);
+      }
 
     } catch (e) {
       if (context.mounted) {

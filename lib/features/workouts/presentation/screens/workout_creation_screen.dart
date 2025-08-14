@@ -4,6 +4,7 @@ import '../widgets/workout_form_widget.dart';
 import '../widgets/workout_exercise_list_widget.dart';
 import '../widgets/workout_cover_image_widget.dart';
 import '../../providers/workout_creation_providers.dart';
+import '../../models/workout_form_mode.dart';
 
 class WorkoutCreationScreen extends ConsumerStatefulWidget {
   const WorkoutCreationScreen({super.key});
@@ -42,11 +43,11 @@ class _WorkoutCreationScreenState extends ConsumerState<WorkoutCreationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Cover Image Section
-                    const WorkoutCoverImageWidget(),
+                    const WorkoutCoverImageWidget(mode: WorkoutFormMode.creation),
                     const SizedBox(height: 24),
 
                     // Basic Information Form
-                    const WorkoutFormWidget(),
+                    const WorkoutFormWidget(mode: WorkoutFormMode.creation),
                     const SizedBox(height: 24),
 
                     // Exercise Selection and Configuration
@@ -57,7 +58,7 @@ class _WorkoutCreationScreenState extends ConsumerState<WorkoutCreationScreen> {
                           ),
                     ),
                     const SizedBox(height: 8),
-                    const WorkoutExerciseListWidget(),
+                    const WorkoutExerciseListWidget(mode: WorkoutFormMode.creation),
                     const SizedBox(height: 16),
 
                     // Error Display

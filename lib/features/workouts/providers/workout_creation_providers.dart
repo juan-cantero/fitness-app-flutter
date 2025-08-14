@@ -109,6 +109,7 @@ class WorkoutExerciseConfig {
   final int? durationSeconds;
   final int restTimeSeconds;
   final String? notes;
+  final String? workoutExerciseId; // For tracking existing workout exercises during edit
 
   const WorkoutExerciseConfig({
     required this.exerciseId,
@@ -119,6 +120,7 @@ class WorkoutExerciseConfig {
     this.durationSeconds,
     this.restTimeSeconds = 60,
     this.notes,
+    this.workoutExerciseId, // Optional for edit mode
   });
 
   WorkoutExerciseConfig copyWith({
@@ -130,6 +132,7 @@ class WorkoutExerciseConfig {
     int? durationSeconds,
     int? restTimeSeconds,
     String? notes,
+    String? workoutExerciseId,
   }) {
     return WorkoutExerciseConfig(
       exerciseId: exerciseId ?? this.exerciseId,
@@ -140,13 +143,14 @@ class WorkoutExerciseConfig {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       restTimeSeconds: restTimeSeconds ?? this.restTimeSeconds,
       notes: notes ?? this.notes,
+      workoutExerciseId: workoutExerciseId ?? this.workoutExerciseId,
     );
   }
 
   WorkoutExercise toWorkoutExercise(String workoutId, int orderIndex) {
     final now = DateTime.now();
     return WorkoutExercise(
-      id: const Uuid().v4(),
+      id: workoutExerciseId ?? const Uuid().v4(), // Use existing ID if available, otherwise create new
       workoutId: workoutId,
       exerciseId: exerciseId,
       orderIndex: orderIndex,
@@ -157,7 +161,7 @@ class WorkoutExerciseConfig {
       restTimeSeconds: restTimeSeconds,
       notes: notes,
       exercise: exercise,
-      createdAt: now,
+      createdAt: workoutExerciseId != null ? now : now, // If editing existing, preserve original dates
       updatedAt: now,
     );
   }
@@ -174,7 +178,8 @@ class WorkoutExerciseConfig {
           weightKg == other.weightKg &&
           durationSeconds == other.durationSeconds &&
           restTimeSeconds == other.restTimeSeconds &&
-          notes == other.notes;
+          notes == other.notes &&
+          workoutExerciseId == other.workoutExerciseId;
 
   @override
   int get hashCode => Object.hash(
@@ -186,6 +191,7 @@ class WorkoutExerciseConfig {
         durationSeconds,
         restTimeSeconds,
         notes,
+        workoutExerciseId,
       );
 }
 
@@ -271,8 +277,7 @@ class WorkoutFormData {
   }
 
   bool get isValid {
-    return name.trim().isNotEmpty && 
-           exercises.isNotEmpty;
+    return name.trim().isNotEmpty;
   }
 
   Workout toWorkout(List<ImageMetadata> images) {
@@ -715,9 +720,7 @@ class WorkoutCreationNotifier extends StateNotifier<WorkoutCreationState> {
       errors['name'] = 'Workout name cannot exceed 100 characters';
     }
 
-    if (data.exercises.isEmpty) {
-      errors['exercises'] = 'At least one exercise is required';
-    }
+    // Exercises are now optional - users can create empty workouts and add exercises later
 
     // Optional field validation
     if (data.description.trim().length > 500) {
@@ -820,8 +823,7 @@ final canSubmitWorkoutProvider = Provider<bool>((ref) {
   
   // If validation was not attempted yet, do basic content checks
   if (!state.validationAttempted) {
-    return state.formData.name.trim().isNotEmpty && 
-           state.formData.exercises.isNotEmpty;
+    return state.formData.name.trim().isNotEmpty;
   }
   
   // If validation was attempted and passed, return true

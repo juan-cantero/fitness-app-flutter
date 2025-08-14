@@ -20,7 +20,7 @@ class LocalWorkoutRepository extends SyncAwareRepository<Workout> implements IWo
 
   @override
   Future<List<Workout>> findByUser(String userId, {int? limit, int? offset}) async {
-    return findWhere(
+    return _findWorkoutsWithExercises(
       'created_by = ?',
       [userId],
       orderBy: 'created_at DESC',
@@ -317,11 +317,266 @@ class LocalWorkoutRepository extends SyncAwareRepository<Workout> implements IWo
   Future<List<Workout>> getPopularWorkouts({int limit = 10}) async {
     // For now, return recent workouts as popular ones
     // In a real implementation, this could be based on usage statistics
-    return findWhere(
+    return _findWorkoutsWithExercises(
       'is_public = 1',
       [1],
       orderBy: 'created_at DESC',
       limit: limit,
     );
+  }
+
+  @override
+  Future<List<Workout>> getAll({
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
+    final db = await database;
+    try {
+      // Get all workout records
+      final workoutResults = await db.query(
+        'workouts',
+        orderBy: orderBy,
+        limit: limit,
+        offset: offset,
+      );
+
+      final List<Workout> workouts = [];
+      
+      // For each workout, load its exercises
+      for (final workoutMap in workoutResults) {
+        final workoutId = workoutMap['id'] as String;
+        
+        // Get exercises for this workout
+        final exerciseResults = await db.query(
+          'workout_exercises',
+          where: 'workout_id = ?',
+          whereArgs: [workoutId],
+          orderBy: 'order_index ASC',
+        );
+
+        final List<WorkoutExercise> exercises = [];
+        for (final exerciseMap in exerciseResults) {
+          final workoutExercise = WorkoutExercise.fromDatabase(exerciseMap);
+          
+          // Load the associated exercise data
+          final exerciseData = await db.query(
+            'exercises',
+            where: 'id = ?',
+            whereArgs: [workoutExercise.exerciseId],
+          );
+          
+          if (exerciseData.isNotEmpty) {
+            final exercise = Exercise.fromDatabase(exerciseData.first);
+            exercises.add(workoutExercise.copyWith(exercise: exercise));
+          } else {
+            exercises.add(workoutExercise);
+          }
+        }
+
+        // Create workout with exercises
+        final workout = Workout.fromDatabase(workoutMap);
+        workouts.add(workout.copyWith(exercises: exercises));
+      }
+
+      return workouts;
+    } catch (e) {
+      throw repo_exceptions.DatabaseException('Failed to get all workouts: $e');
+    }
+  }
+
+  /// Helper method to load workouts with their exercises
+  Future<List<Workout>> _findWorkoutsWithExercises(
+    String where,
+    List<Object?> whereArgs, {
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
+    final db = await database;
+    try {
+      // 1. Get workout records
+      final workoutResults = await db.query(
+        'workouts',
+        where: where,
+        whereArgs: whereArgs,
+        orderBy: orderBy,
+        limit: limit,
+        offset: offset,
+      );
+
+      final List<Workout> workouts = [];
+      
+      // 2. For each workout, load its exercises
+      for (final workoutMap in workoutResults) {
+        final workoutId = workoutMap['id'] as String;
+        
+        // Get exercises for this workout
+        final exerciseResults = await db.query(
+          'workout_exercises',
+          where: 'workout_id = ?',
+          whereArgs: [workoutId],
+          orderBy: 'order_index ASC',
+        );
+
+        final List<WorkoutExercise> exercises = [];
+        for (final exerciseMap in exerciseResults) {
+          final workoutExercise = WorkoutExercise.fromDatabase(exerciseMap);
+          
+          // Load the associated exercise data
+          final exerciseData = await db.query(
+            'exercises',
+            where: 'id = ?',
+            whereArgs: [workoutExercise.exerciseId],
+          );
+          
+          if (exerciseData.isNotEmpty) {
+            final exercise = Exercise.fromDatabase(exerciseData.first);
+            exercises.add(workoutExercise.copyWith(exercise: exercise));
+          } else {
+            exercises.add(workoutExercise);
+          }
+        }
+
+        // Create workout with exercises
+        final workout = Workout.fromDatabase(workoutMap);
+        workouts.add(workout.copyWith(exercises: exercises));
+      }
+
+      return workouts;
+    } catch (e) {
+      throw repo_exceptions.DatabaseException('Failed to find workouts with exercises: $e');
+    }
+  }
+
+  @override
+  Future<Workout?> getById(String id) async {
+    final db = await database;
+    try {
+      // 1. Get the main workout record
+      final workoutResults = await db.query(
+        'workouts',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (workoutResults.isEmpty) {
+        return null;
+      }
+
+      // 2. Get the workout exercises
+      final exerciseResults = await db.query(
+        'workout_exercises',
+        where: 'workout_id = ?',
+        whereArgs: [id],
+        orderBy: 'order_index ASC',
+      );
+
+      // 3. Convert exercises from database
+      final List<WorkoutExercise> exercises = [];
+      for (final exerciseMap in exerciseResults) {
+        final workoutExercise = WorkoutExercise.fromDatabase(exerciseMap);
+        
+        // Load the associated exercise data if needed
+        final exerciseData = await db.query(
+          'exercises',
+          where: 'id = ?',
+          whereArgs: [workoutExercise.exerciseId],
+        );
+        
+        if (exerciseData.isNotEmpty) {
+          final exercise = Exercise.fromDatabase(exerciseData.first);
+          exercises.add(workoutExercise.copyWith(exercise: exercise));
+        } else {
+          exercises.add(workoutExercise);
+        }
+      }
+
+      // 4. Create workout with exercises
+      final workout = Workout.fromDatabase(workoutResults.first);
+      return workout.copyWith(exercises: exercises);
+      
+    } catch (e) {
+      throw repo_exceptions.DatabaseException('Failed to get workout by id: $e');
+    }
+  }
+
+  @override
+  Future<Workout> create(Workout model) async {
+    final db = await database;
+    
+    try {
+      return await db.transaction<Workout>((txn) async {
+        // 1. Insert the main workout record (without exercises)
+        final workoutData = model.toDatabase();
+        
+        await txn.insert('workouts', workoutData);
+        
+        // 2. Insert the workout exercises separately
+        for (int i = 0; i < model.exercises.length; i++) {
+          final exercise = model.exercises[i];
+          final exerciseData = exercise.toDatabase();
+          // Ensure correct order and workout ID
+          exerciseData['order_index'] = i;
+          exerciseData['workout_id'] = model.id;
+          
+          await txn.insert('workout_exercises', exerciseData);
+        }
+        
+        return model;
+      });
+    } catch (e) {
+      throw repo_exceptions.DatabaseException('Failed to create workout: $e');
+    }
+  }
+
+  @override
+  Future<Workout> update(Workout model) async {
+    final db = await database;
+    
+    try {
+      return await db.transaction<Workout>((txn) async {
+        // 1. Update the main workout record (without exercises to avoid serialization issues)
+        final workoutData = model.toDatabase();
+        // Remove exercises from the main workout data as they're handled separately
+        workoutData.remove('exercises');
+        
+        final count = await txn.update(
+          'workouts',
+          workoutData,
+          where: 'id = ?',
+          whereArgs: [model.id],
+        );
+        
+        if (count == 0) {
+          throw repo_exceptions.DatabaseException('Workout with id ${model.id} not found');
+        }
+        
+        // 2. Handle workout exercises separately
+        // First, remove all existing exercises for this workout
+        await txn.delete(
+          'workout_exercises',
+          where: 'workout_id = ?',
+          whereArgs: [model.id],
+        );
+        
+        // 3. Insert the new/updated exercises
+        for (int i = 0; i < model.exercises.length; i++) {
+          final exercise = model.exercises[i];
+          final exerciseData = exercise.toDatabase();
+          // Ensure correct order and workout ID
+          exerciseData['order_index'] = i;
+          exerciseData['workout_id'] = model.id;
+          
+          await txn.insert('workout_exercises', exerciseData);
+        }
+        
+        // Note: Sync tracking is handled by the base transaction mechanism
+        
+        return model;
+      });
+    } catch (e) {
+      throw repo_exceptions.DatabaseException('Failed to update workout: $e');
+    }
   }
 }

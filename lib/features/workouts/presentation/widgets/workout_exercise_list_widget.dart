@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/workout_creation_providers.dart';
+import '../../providers/workout_edit_providers.dart';
+import '../../models/workout_form_mode.dart';
 import '../dialogs/exercise_selection_dialog.dart';
 import '../dialogs/exercise_configuration_dialog.dart';
 import '../../../../shared/widgets/cached_network_image_widget.dart';
 
 class WorkoutExerciseListWidget extends ConsumerWidget {
-  const WorkoutExerciseListWidget({super.key});
+  final WorkoutFormMode mode;
+  
+  const WorkoutExerciseListWidget({
+    super.key,
+    this.mode = WorkoutFormMode.creation,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(workoutCreationProvider);
-    final notifier = ref.read(workoutCreationProvider.notifier);
-    final validation = ref.watch(workoutFormValidationProvider);
+    // Get typed data based on mode
+    List<WorkoutExerciseConfig> exercises;
+    bool validationAttempted;
+    WorkoutFormValidationState validation;
+    
+    if (mode == WorkoutFormMode.creation) {
+      final state = ref.watch(workoutCreationProvider);
+      exercises = state.formData.exercises;
+      validationAttempted = state.validationAttempted;
+      validation = ref.watch(workoutFormValidationProvider);
+    } else {
+      final state = ref.watch(workoutEditProvider);
+      exercises = state.formData.exercises;
+      validationAttempted = state.validationAttempted;
+      validation = state.validationState;
+    }
 
     return Card(
       child: Padding(
@@ -38,7 +58,7 @@ class WorkoutExerciseListWidget extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            if (state.formData.exercises.isEmpty) ...[
+            if (exercises.isEmpty) ...[
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -77,25 +97,24 @@ class WorkoutExerciseListWidget extends ConsumerWidget {
               ReorderableListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: state.formData.exercises.length,
+                itemCount: exercises.length,
                 onReorder: (oldIndex, newIndex) {
-                  notifier.reorderExercises(oldIndex, newIndex);
+                  _reorderExercises(ref, oldIndex, newIndex);
                 },
                 itemBuilder: (context, index) {
-                  final exerciseConfig = state.formData.exercises[index];
+                  final exerciseConfig = exercises[index];
                   return _buildExerciseCard(
                     context,
                     ref,
                     exerciseConfig,
                     index,
-                    notifier,
                   );
                 },
               ),
             ],
 
             // Error display for exercises (only show if validation was attempted)
-            if (validation.hasError('exercises') && state.validationAttempted) ...[
+            if (validation.hasError('exercises') && validationAttempted) ...[
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -128,12 +147,35 @@ class WorkoutExerciseListWidget extends ConsumerWidget {
     );
   }
 
+  void _reorderExercises(WidgetRef ref, int oldIndex, int newIndex) {
+    if (mode == WorkoutFormMode.creation) {
+      ref.read(workoutCreationProvider.notifier).reorderExercises(oldIndex, newIndex);
+    } else {
+      ref.read(workoutEditProvider.notifier).reorderExercises(oldIndex, newIndex);
+    }
+  }
+  
+  void _removeExercise(WidgetRef ref, int index) {
+    if (mode == WorkoutFormMode.creation) {
+      ref.read(workoutCreationProvider.notifier).removeExercise(index);
+    } else {
+      ref.read(workoutEditProvider.notifier).removeExercise(index);
+    }
+  }
+  
+  void _updateExerciseConfig(WidgetRef ref, int index, WorkoutExerciseConfig updatedConfig) {
+    if (mode == WorkoutFormMode.creation) {
+      ref.read(workoutCreationProvider.notifier).updateExerciseConfig(index, updatedConfig);
+    } else {
+      ref.read(workoutEditProvider.notifier).updateExerciseConfig(index, updatedConfig);
+    }
+  }
+
   Widget _buildExerciseCard(
     BuildContext context,
     WidgetRef ref,
     WorkoutExerciseConfig exerciseConfig,
     int index,
-    WorkoutCreationNotifier notifier,
   ) {
     return Card(
       key: ValueKey(exerciseConfig.exerciseId),
@@ -200,7 +242,7 @@ class WorkoutExerciseListWidget extends ConsumerWidget {
                     );
                     break;
                   case 'remove':
-                    notifier.removeExercise(index);
+                    _removeExercise(ref, index);
                     break;
                 }
               },
@@ -268,7 +310,7 @@ class WorkoutExerciseListWidget extends ConsumerWidget {
   Future<void> _showExerciseSelectionDialog(BuildContext context, WidgetRef ref) async {
     await showDialog<void>(
       context: context,
-      builder: (context) => const ExerciseSelectionDialog(),
+      builder: (context) => ExerciseSelectionDialog(mode: mode),
     );
   }
 
@@ -283,7 +325,7 @@ class WorkoutExerciseListWidget extends ConsumerWidget {
       builder: (context) => ExerciseConfigurationDialog(
         exerciseConfig: config,
         onConfigurationUpdated: (updatedConfig) {
-          ref.read(workoutCreationProvider.notifier).updateExerciseConfig(index, updatedConfig);
+          _updateExerciseConfig(ref, index, updatedConfig);
         },
       ),
     );

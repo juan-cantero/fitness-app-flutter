@@ -1,15 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/workout_creation_providers.dart';
+import '../../providers/workout_edit_providers.dart';
+import '../../models/workout_form_mode.dart';
 
 class WorkoutFormWidget extends ConsumerWidget {
-  const WorkoutFormWidget({super.key});
+  final WorkoutFormMode mode;
+  
+  const WorkoutFormWidget({
+    super.key,
+    this.mode = WorkoutFormMode.creation,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(workoutCreationProvider);
-    final notifier = ref.read(workoutCreationProvider.notifier);
-    final validation = ref.watch(workoutFormValidationProvider);
+    // Get typed state and notifiers
+    WorkoutFormData formData;
+    WorkoutFormValidationState validation;
+    
+    if (mode == WorkoutFormMode.creation) {
+      final state = ref.watch(workoutCreationProvider);
+      formData = state.formData;
+      validation = ref.watch(workoutFormValidationProvider);
+    } else {
+      final state = ref.watch(workoutEditProvider);
+      formData = state.formData;
+      validation = state.validationState;
+    }
 
     return Card(
       child: Padding(
@@ -27,26 +44,26 @@ class WorkoutFormWidget extends ConsumerWidget {
 
             // Workout Name
             TextFormField(
-              initialValue: state.formData.name,
+              initialValue: formData.name,
               decoration: InputDecoration(
                 labelText: 'Workout Name *',
                 hintText: 'Enter workout name',
                 errorText: validation.getError('name'),
               ),
-              onChanged: (value) => notifier.updateField('name', value),
+              onChanged: (value) => _updateField(ref, 'name', value),
             ),
             const SizedBox(height: 16),
 
             // Description
             TextFormField(
-              initialValue: state.formData.description,
+              initialValue: formData.description,
               decoration: InputDecoration(
                 labelText: 'Description',
                 hintText: 'Describe your workout',
                 errorText: validation.getError('description'),
               ),
               maxLines: 3,
-              onChanged: (value) => notifier.updateField('description', value),
+              onChanged: (value) => _updateField(ref, 'description', value),
             ),
             const SizedBox(height: 16),
 
@@ -58,7 +75,7 @@ class WorkoutFormWidget extends ConsumerWidget {
                     builder: (context, ref, child) {
                       final options = ref.watch(difficultyLevelOptionsProvider);
                       return DropdownButtonFormField<String>(
-                        value: state.formData.difficultyLevel,
+                        value: formData.difficultyLevel,
                         decoration: const InputDecoration(
                           labelText: 'Difficulty',
                         ),
@@ -70,7 +87,7 @@ class WorkoutFormWidget extends ConsumerWidget {
                         }).toList(),
                         onChanged: (value) {
                           if (value != null) {
-                            notifier.updateField('difficultyLevel', value);
+                            _updateField(ref, 'difficultyLevel', value);
                           }
                         },
                       );
@@ -83,7 +100,7 @@ class WorkoutFormWidget extends ConsumerWidget {
                     builder: (context, ref, child) {
                       final options = ref.watch(workoutTypeOptionsProvider);
                       return DropdownButtonFormField<String>(
-                        value: state.formData.workoutType,
+                        value: formData.workoutType,
                         decoration: const InputDecoration(
                           labelText: 'Type',
                         ),
@@ -95,7 +112,7 @@ class WorkoutFormWidget extends ConsumerWidget {
                         }).toList(),
                         onChanged: (value) {
                           if (value != null) {
-                            notifier.updateField('workoutType', value);
+                            _updateField(ref, 'workoutType', value);
                           }
                         },
                       );
@@ -111,7 +128,7 @@ class WorkoutFormWidget extends ConsumerWidget {
               children: [
                 Expanded(
                   child: TextFormField(
-                    initialValue: state.formData.estimatedDurationMinutes.toString(),
+                    initialValue: formData.estimatedDurationMinutes.toString(),
                     decoration: InputDecoration(
                       labelText: 'Duration (minutes)',
                       errorText: validation.getError('estimatedDurationMinutes'),
@@ -119,7 +136,7 @@ class WorkoutFormWidget extends ConsumerWidget {
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
                       final duration = int.tryParse(value) ?? 45;
-                      notifier.updateField('estimatedDurationMinutes', duration);
+                      _updateField(ref, 'estimatedDurationMinutes', duration);
                     },
                   ),
                 ),
@@ -129,7 +146,7 @@ class WorkoutFormWidget extends ConsumerWidget {
                     builder: (context, ref, child) {
                       final options = ref.watch(intensityLevelOptionsProvider);
                       return DropdownButtonFormField<String>(
-                        value: state.formData.intensityLevel,
+                        value: formData.intensityLevel,
                         decoration: const InputDecoration(
                           labelText: 'Intensity',
                         ),
@@ -141,7 +158,7 @@ class WorkoutFormWidget extends ConsumerWidget {
                         }).toList(),
                         onChanged: (value) {
                           if (value != null) {
-                            notifier.updateField('intensityLevel', value);
+                            _updateField(ref, 'intensityLevel', value);
                           }
                         },
                       );
@@ -157,7 +174,7 @@ class WorkoutFormWidget extends ConsumerWidget {
               builder: (context, ref, child) {
                 final options = ref.watch(spaceRequirementOptionsProvider);
                 return DropdownButtonFormField<String>(
-                  value: state.formData.spaceRequirement,
+                  value: formData.spaceRequirement,
                   decoration: const InputDecoration(
                     labelText: 'Space Required',
                   ),
@@ -169,7 +186,7 @@ class WorkoutFormWidget extends ConsumerWidget {
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      notifier.updateField('spaceRequirement', value);
+                      _updateField(ref, 'spaceRequirement', value);
                     }
                   },
                 );
@@ -178,11 +195,11 @@ class WorkoutFormWidget extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // Target Muscle Groups
-            _buildMuscleGroupsSelector(context, ref, state, notifier),
+            _buildMuscleGroupsSelector(context, ref, formData),
             const SizedBox(height: 16),
 
             // Equipment Needed
-            _buildEquipmentSelector(context, ref, state, notifier),
+            _buildEquipmentSelector(context, ref, formData),
             const SizedBox(height: 16),
 
             // Rest Times Row
@@ -190,28 +207,28 @@ class WorkoutFormWidget extends ConsumerWidget {
               children: [
                 Expanded(
                   child: TextFormField(
-                    initialValue: state.formData.restBetweenExercises.toString(),
+                    initialValue: formData.restBetweenExercises.toString(),
                     decoration: const InputDecoration(
                       labelText: 'Rest Between Exercises (s)',
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
                       final rest = int.tryParse(value) ?? 60;
-                      notifier.updateField('restBetweenExercises', rest);
+                      _updateField(ref, 'restBetweenExercises', rest);
                     },
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: TextFormField(
-                    initialValue: state.formData.restBetweenSets.toString(),
+                    initialValue: formData.restBetweenSets.toString(),
                     decoration: const InputDecoration(
                       labelText: 'Rest Between Sets (s)',
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
                       final rest = int.tryParse(value) ?? 60;
-                      notifier.updateField('restBetweenSets', rest);
+                      _updateField(ref, 'restBetweenSets', rest);
                     },
                   ),
                 ),
@@ -221,13 +238,13 @@ class WorkoutFormWidget extends ConsumerWidget {
 
             // Notes
             TextFormField(
-              initialValue: state.formData.notes,
+              initialValue: formData.notes,
               decoration: const InputDecoration(
                 labelText: 'Notes',
                 hintText: 'Additional notes about the workout',
               ),
               maxLines: 2,
-              onChanged: (value) => notifier.updateField('notes', value),
+              onChanged: (value) => _updateField(ref, 'notes', value),
             ),
             const SizedBox(height: 16),
 
@@ -249,11 +266,11 @@ class WorkoutFormWidget extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  value: state.formData.isTemplate,
+                  value: formData.isTemplate,
                   contentPadding: EdgeInsets.zero,
                   onChanged: (value) {
                     if (value != null) {
-                      notifier.updateField('isTemplate', value);
+                      _updateField(ref, 'isTemplate', value);
                     }
                   },
                 ),
@@ -272,11 +289,11 @@ class WorkoutFormWidget extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  value: state.formData.isPublic,
+                  value: formData.isPublic,
                   contentPadding: EdgeInsets.zero,
                   onChanged: (value) {
                     if (value != null) {
-                      notifier.updateField('isPublic', value);
+                      _updateField(ref, 'isPublic', value);
                     }
                   },
                 ),
@@ -288,11 +305,18 @@ class WorkoutFormWidget extends ConsumerWidget {
     );
   }
 
+  void _updateField(WidgetRef ref, String field, dynamic value) {
+    if (mode == WorkoutFormMode.creation) {
+      ref.read(workoutCreationProvider.notifier).updateField(field, value);
+    } else {
+      ref.read(workoutEditProvider.notifier).updateField(field, value);
+    }
+  }
+
   Widget _buildMuscleGroupsSelector(
     BuildContext context,
     WidgetRef ref,
-    WorkoutCreationState state,
-    WorkoutCreationNotifier notifier,
+    WorkoutFormData formData,
   ) {
     // Using static muscle groups for now
     // final muscleGroups = ref.watch(exerciseCategoriesProvider);
@@ -313,18 +337,18 @@ class WorkoutFormWidget extends ConsumerWidget {
           children: [
             'chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'cardio'
           ].map((group) {
-            final isSelected = state.formData.targetMuscleGroups.contains(group);
+            final isSelected = formData.targetMuscleGroups.contains(group);
             return FilterChip(
               label: Text(group.toUpperCase()),
               selected: isSelected,
               onSelected: (selected) {
-                final updatedGroups = List<String>.from(state.formData.targetMuscleGroups);
+                final updatedGroups = List<String>.from(formData.targetMuscleGroups);
                 if (selected) {
                   updatedGroups.add(group);
                 } else {
                   updatedGroups.remove(group);
                 }
-                notifier.updateField('targetMuscleGroups', updatedGroups);
+                _updateField(ref, 'targetMuscleGroups', updatedGroups);
               },
             );
           }).toList(),
@@ -336,8 +360,7 @@ class WorkoutFormWidget extends ConsumerWidget {
   Widget _buildEquipmentSelector(
     BuildContext context,
     WidgetRef ref,
-    WorkoutCreationState state,
-    WorkoutCreationNotifier notifier,
+    WorkoutFormData formData,
   ) {
     // Using static equipment list for now  
     // final equipment = ref.watch(exerciseEquipmentProvider);
@@ -358,18 +381,18 @@ class WorkoutFormWidget extends ConsumerWidget {
           children: [
             'bodyweight', 'dumbbells', 'barbell', 'kettlebells', 'resistance bands', 'pull-up bar', 'bench', 'mat'
           ].map((item) {
-            final isSelected = state.formData.equipmentNeeded.contains(item);
+            final isSelected = formData.equipmentNeeded.contains(item);
             return FilterChip(
               label: Text(item.toUpperCase()),
               selected: isSelected,
               onSelected: (selected) {
-                final updatedEquipment = List<String>.from(state.formData.equipmentNeeded);
+                final updatedEquipment = List<String>.from(formData.equipmentNeeded);
                 if (selected) {
                   updatedEquipment.add(item);
                 } else {
                   updatedEquipment.remove(item);
                 }
-                notifier.updateField('equipmentNeeded', updatedEquipment);
+                _updateField(ref, 'equipmentNeeded', updatedEquipment);
               },
             );
           }).toList(),

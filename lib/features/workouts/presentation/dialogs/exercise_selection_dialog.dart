@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../exercises/providers/exercises_providers.dart';
 import '../../providers/workout_creation_providers.dart';
+import '../../providers/workout_edit_providers.dart';
+import '../../models/workout_form_mode.dart';
 import '../../../../shared/widgets/cached_network_image_widget.dart';
 import '../../../../shared/models/exercise.dart';
 
 class ExerciseSelectionDialog extends ConsumerStatefulWidget {
-  const ExerciseSelectionDialog({super.key});
+  final WorkoutFormMode mode;
+  
+  const ExerciseSelectionDialog({
+    super.key,
+    this.mode = WorkoutFormMode.creation,
+  });
 
   @override
   ConsumerState<ExerciseSelectionDialog> createState() => _ExerciseSelectionDialogState();
@@ -147,15 +154,30 @@ class _ExerciseSelectionDialogState extends ConsumerState<ExerciseSelectionDialo
 
   void _selectExercise(Exercise exercise) {
     // Add exercise with default configuration
-    ref.read(workoutCreationProvider.notifier).addExercise(
-      exercise,
-      sets: 3,
-      reps: exercise.name.toLowerCase().contains('plank') || 
-            exercise.name.toLowerCase().contains('hold') ? null : 12,
-      durationSeconds: exercise.name.toLowerCase().contains('plank') || 
-                      exercise.name.toLowerCase().contains('hold') ? 30 : null,
-      restTimeSeconds: 60,
-    );
+    final sets = 3;
+    final reps = exercise.name.toLowerCase().contains('plank') || 
+                 exercise.name.toLowerCase().contains('hold') ? null : 12;
+    final durationSeconds = exercise.name.toLowerCase().contains('plank') || 
+                           exercise.name.toLowerCase().contains('hold') ? 30 : null;
+    final restTimeSeconds = 60;
+    
+    if (widget.mode == WorkoutFormMode.creation) {
+      ref.read(workoutCreationProvider.notifier).addExercise(
+        exercise,
+        sets: sets,
+        reps: reps,
+        durationSeconds: durationSeconds,
+        restTimeSeconds: restTimeSeconds,
+      );
+    } else {
+      ref.read(workoutEditProvider.notifier).addExercise(
+        exercise,
+        sets: sets,
+        reps: reps,
+        durationSeconds: durationSeconds,
+        restTimeSeconds: restTimeSeconds,
+      );
+    }
 
     Navigator.of(context).pop();
 

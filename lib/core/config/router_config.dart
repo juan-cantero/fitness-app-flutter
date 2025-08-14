@@ -12,6 +12,7 @@ import '../../features/workouts/presentation/screens/workout_detail_screen.dart'
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_creation_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_edit_screen.dart';
+import '../../features/workouts/presentation/screens/workout_edit_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/debug/presentation/screens/database_debug_screen.dart';
 import '../../shared/widgets/main_navigation.dart';
@@ -111,6 +112,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       
+      // Edit workout (full-screen)
+      GoRoute(
+        path: AppConstants.editWorkoutRoute,
+        name: 'edit-workout',
+        builder: (context, state) {
+          final workoutId = state.pathParameters['id']!;
+          return WorkoutEditScreen(workoutId: workoutId);
+        },
+      ),
+      
       // Debug routes (development only)
       GoRoute(
         path: '/debug/database',
@@ -173,6 +184,14 @@ extension GoRouterExtensions on GoRouter {
   
   void pushCreateExercise() {
     push(AppConstants.createExerciseRoute);
+  }
+  
+  void pushEditWorkout(String workoutId) {
+    push('/workout/$workoutId/edit');
+  }
+  
+  void pushEditExercise(String exerciseId) {
+    push('/exercise/$exerciseId/edit');
   }
   
   void goToLogin() {
